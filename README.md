@@ -91,4 +91,10 @@ Playwright가 localhost:8081의 Expo 웹을 시작하고 모바일 폭에서 시
 
 사진 선택은 [Expo ImagePicker](https://docs.expo.dev/versions/latest/sdk/imagepicker/)를 사용한다. 실제 휴대폰의 사진 접근 및 네이티브 업로드는 별도 확인이 필요하다.
 
-2026-11-02 피드·사진 추가 검증: 타입·린트·로그인 유지 테스트 통과, 웹/iOS/Android 번들 생성 및 사진 첨부 → 친구 피드 → 사진 확대 브라우저 시나리오 통과. 운영 저장소 설정·실기기 사진 선택은 미검증.
+2026-11-02 피드·사진 추가 검증: 타입·린트·로그인 유지 테스트 통과, 웹/iOS/Android 번들 생성 및 사진 첨부 → 친구 피드 → 사진 확대 브라우저 시나리오 통과. 운영 저장소는 후속 배포에서 설정·검증 완료. 실기기 사진 선택은 미검증.
+
+
+## 배포 상태 (2026-11-02)
+
+운영 API에 친구 피드·사진 업로드를 배포하고 실제 저장까지 확인했다. 앱 소스도 `main`에 push했다. Expo Go에서 최신 코드를 열어 실기기 사진 선택·로그인 유지를 확인한다. App Store/Play Store 배포는 아직 하지 않았다.
+앞으로 작업 완료 후 검사·commit·push하고, 커밋 제목은 `feat/short summary`, `fix/short summary`처럼 짧은 영어로 작성한다(`AGENTS.md`).
