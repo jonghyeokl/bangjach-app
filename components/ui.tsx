@@ -2,6 +2,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   KeyboardAvoidingView,
   Platform,
   Image,
@@ -13,9 +14,11 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import { router, useRouter, useSegments } from 'expo-router';
 import { useSession } from '@/lib/session';
-import type { Option, Review, Theme } from '@/lib/types';
+import { useState } from 'react';
+import { API_URL } from '@/lib/api';
+import type { Option, Photo, Review, Theme } from '@/lib/types';
 
 export const colors = {
   bg: '#F6F5F0',
@@ -90,9 +93,13 @@ export function Screen({
   subtitle?: string;
   children: ReactNode;
 }) {
-  const path = usePathname();
+  const navigation = useRouter();
+  const inTabs = useSegments()[0] === '(tabs)';
   return (
-    <SafeAreaView style={styles.page}>
+    <SafeAreaView
+      style={styles.page}
+      edges={inTabs ? ['top', 'left', 'right'] : ['top', 'bottom', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -100,28 +107,16 @@ export function Screen({
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.row}>
             <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
-            {[
-              ['/', '테마 탐색'],
-              ['/me', '내 기록'],
-              ['/friends', '친구'],
-              ['/calendar', '캘린더'],
-            ].map(([href, label]) => (
+            {!inTabs && navigation.canGoBack() && (
               <Pressable
-                key={href}
-                accessibilityRole="link"
-                onPress={() => router.dismissTo(href as never)}
-                style={{ padding: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel="뒤로"
+                onPress={() => navigation.back()}
+                style={{ padding: 8 }}
               >
-                <Text
-                  style={{
-                    color: path === href ? colors.green : colors.muted,
-                    fontWeight: path === href ? '700' : '400',
-                  }}
-                >
-                  {label}
-                </Text>
+                <Text style={styles.text}>← 뒤로</Text>
               </Pressable>
-            ))}
+            )}
           </View>
           <View style={{ gap: 7, marginVertical: 8 }}>
             <Text style={styles.title}>{title}</Text>
@@ -326,6 +321,7 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
         {review.people_size ? ` · ${review.people_size}명` : ''}
         {review.is_success !== null ? ` · ${review.is_success ? '탈출 성공' : '탈출 실패'}` : ''}
       </Text>
+      <ReviewPhotos photos={review.photos ?? []} />
       {!!review.content && <Text style={styles.text}>{review.content}</Text>}
       <Text style={styles.muted}>
         {review.review_keyword_list
@@ -348,6 +344,60 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
           }
         />
       )}
+    </View>
+  );
+}
+
+export const photoUrl = (url: string) => (url.startsWith('/') ? API_URL + url : url);
+
+export function ReviewPhotos({ photos }: { photos: Photo[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  if (!photos.length) return null;
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={styles.muted}>리뷰 사진 · {photos.length}장</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10 }}
+      >
+        {photos.map((photo, index) => (
+          <Pressable
+            key={photo.id}
+            accessibilityRole="button"
+            accessibilityLabel={`리뷰 사진 ${index + 1} 크게 보기`}
+            onPress={() => setSelected(photoUrl(photo.url))}
+          >
+            <Image
+              source={{ uri: photoUrl(photo.url) }}
+              accessibilityLabel={`리뷰 사진 ${index + 1}`}
+              style={{ width: 220, height: 220, borderRadius: 12, backgroundColor: colors.light }}
+              resizeMode="cover"
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
+      <Modal visible={selected !== null} transparent onRequestClose={() => setSelected(null)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#000E',
+            justifyContent: 'center',
+            padding: 24,
+            gap: 20,
+          }}
+        >
+          {selected && (
+            <Image
+              source={{ uri: selected }}
+              style={{ width: '100%', height: '70%' }}
+              resizeMode="contain"
+              accessibilityLabel="리뷰 사진 확대"
+            />
+          )}
+          <Button title="사진 닫기" onPress={() => setSelected(null)} />
+        </View>
+      </Modal>
     </View>
   );
 }

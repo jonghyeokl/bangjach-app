@@ -13,6 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck && npm run lint
+      - run: npm run test:auth
       - run: npx expo export --platform web
         env:
           EXPO_PUBLIC_API_URL: http://localhost:8000

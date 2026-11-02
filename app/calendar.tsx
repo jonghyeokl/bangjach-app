@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -21,28 +21,26 @@ function thisMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 export default function CalendarScreen() {
+  const { user } = useSession();
+  const { userId } = useLocalSearchParams<{ userId?: string }>();
+  const initialTarget = userId ?? user?.id ?? '';
   return (
     <Screen title="기억을 모은 달력" subtitle="그날 풀었던 이야기를 다시 꺼내보세요.">
       <Guard>
-        <Calendar />
+        <Calendar key={`${user?.id}:${initialTarget}`} initialTarget={initialTarget} />
       </Guard>
     </Screen>
   );
 }
-function Calendar() {
+function Calendar({ initialTarget }: { initialTarget: string }) {
   const { user } = useSession();
-  const ownerId = user!.id;
-  const { userId } = useLocalSearchParams<{ userId?: string }>();
-  const [target, setTarget] = useState(userId ?? user!.id);
+  const [target, setTarget] = useState(initialTarget);
   const [month, setMonth] = useState(thisMonth());
   const [input, setInput] = useState(month);
   const [day, setDay] = useState<number | null>(null);
   const [friendPage, setFriendPage] = useState(1);
   const friends = useResource<Page<Friend>>(`/friend/v1?page=${friendPage}`);
   const data = useResource<CalendarData>(`/user/v1/${target}/calendar?month=${month}`);
-  useEffect(() => {
-    setTarget(userId ?? ownerId);
-  }, [userId, ownerId]);
   const [year, m] = month.split('-').map(Number);
   const valid = year >= 1 && year <= 9999 && m >= 1 && m <= 12;
   const count = valid ? new Date(year, m, 0).getDate() : 0;

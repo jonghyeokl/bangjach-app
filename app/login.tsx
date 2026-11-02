@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { api, json, login } from '@/lib/api';
 import { Button, Feedback, Field, Screen, styles } from '@/components/ui';
 
 export default function Login() {
-  const [signup, setSignup] = useState(false);
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  return <LoginForm key={mode ?? 'login'} initialSignup={mode === 'signup'} />;
+}
+function LoginForm({ initialSignup }: { initialSignup: boolean }) {
+  const [signup, setSignup] = useState(initialSignup);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -18,7 +22,6 @@ export default function Login() {
       if (signup)
         await api('/user/v1/sign-up', json('POST', { phone_number: phone, password, name }));
       await login(phone, password);
-      router.replace('/me');
     } catch (e) {
       setError((e as Error).message);
     } finally {

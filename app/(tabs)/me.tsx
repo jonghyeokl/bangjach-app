@@ -10,8 +10,8 @@ export default function Me() {
   const { user } = useSession();
   return (
     <Screen
-      title={user ? `${user.name}님의 방자취` : '나의 방자취'}
-      subtitle="한 방, 한 이야기씩 쌓이는 나만의 기록."
+      title="마이페이지"
+      subtitle={user ? `${user.name}님의 방자취를 모아보세요.` : '나의 방자취'}
     >
       <Guard>
         <Records />
@@ -28,10 +28,12 @@ function Records() {
       <View style={styles.card}>
         <Text style={styles.heading}>지금까지 {rows.data?.total ?? '…'}개의 이야기</Text>
         <View style={styles.row}>
-          <Button title="캘린더로 보기" onPress={() => router.push('/calendar')} />
-          <Button secondary title="공개 설정" onPress={() => router.push('/settings')} />
+          <Button title="캘린더" onPress={() => router.push('/calendar')} />
+          <Button secondary title="친구" onPress={() => router.push('/friends')} />
+          <Button secondary title="설정 및 로그아웃" onPress={() => router.push('/settings')} />
         </View>
       </View>
+      <Text style={styles.heading}>내 리뷰</Text>
       <Feedback loading={rows.loading} error={rows.error} retry={rows.reload} />
       {rows.data?.items.map((r) => (
         <ReviewCard key={r.id} review={r} keywords={meta.data?.review_keyword} />

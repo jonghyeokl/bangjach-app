@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
+import { photoUrl, Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
+import * as ImagePicker from 'expo-image-picker';
 import { api, json } from '@/lib/api';
 import { useResource } from '@/lib/hooks';
-import type { Enums, Review, Theme } from '@/lib/types';
+import type { Enums, Photo, Review, Theme } from '@/lib/types';
 
 const scores = Array.from({ length: 9 }, (_, i) => ({
   value: 1 + i * 0.5,
@@ -23,37 +24,77 @@ export default function ReviewEditor() {
 function Editor() {
   const { themeId, reviewId } = useLocalSearchParams<{ themeId: string; reviewId?: string }>();
   const existing = useResource<Review>(reviewId ? `/review/v1/${reviewId}` : null);
+  if (reviewId && !existing.data)
+    return <Feedback loading={existing.loading} error={existing.error} retry={existing.reload} />;
+  return (
+    <ReviewForm
+      key={reviewId ?? themeId}
+      themeId={themeId}
+      reviewId={reviewId}
+      initial={existing.data}
+    />
+  );
+}
+function ReviewForm({
+  themeId,
+  reviewId,
+  initial,
+}: {
+  themeId: string;
+  reviewId?: string;
+  initial: Review | null;
+}) {
   const theme = useResource<Theme>(`/theme/v1/${themeId}`);
   const meta = useResource<Enums>('/meta/v1/enums');
-  const [rating, setRating] = useState<number | null>(null);
-  const [date, setDate] = useState('');
-  const [content, setContent] = useState('');
-  const [genre, setGenre] = useState<number[]>([]);
-  const [success, setSuccess] = useState<number | null>(null);
-  const [numbers, setNumbers] = useState({ people_size: '', hint_count: '', played_time: '' });
-  const [details, setDetails] = useState<Record<(typeof fields)[number], number | null>>({
-    difficulty: null,
-    horrorness: null,
-    physicality: null,
+  const [rating, setRating] = useState<number | null>(initial?.rating ?? null);
+  const [date, setDate] = useState(initial?.date ?? '');
+  const [content, setContent] = useState(initial?.content ?? '');
+  const [genre, setGenre] = useState<number[]>(initial?.genre_list ?? []);
+  const [success, setSuccess] = useState<number | null>(
+    initial?.is_success == null ? null : Number(initial.is_success),
+  );
+  const [numbers, setNumbers] = useState({
+    people_size: initial?.people_size?.toString() ?? '',
+    hint_count: initial?.hint_count?.toString() ?? '',
+    played_time: initial?.played_time?.toString() ?? '',
   });
+  const [details, setDetails] = useState<Record<(typeof fields)[number], number | null>>({
+    difficulty: initial?.difficulty ?? null,
+    horrorness: initial?.horrorness ?? null,
+    physicality: initial?.physicality ?? null,
+  });
+  const [photos, setPhotos] = useState<(Photo & { preview?: string })[]>(initial?.photos ?? []);
+  const [uploading, setUploading] = useState(false);
+  async function pickPhotos() {
+    setError('');
+    setUploading(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        selectionLimit: 5 - photos.length,
+        quality: 0.8,
+      });
+      if (result.canceled) return;
+      for (const asset of result.assets.slice(0, 5 - photos.length)) {
+        const blob = asset.file ?? (await (await fetch(asset.uri)).blob());
+        if (blob.size > 8 * 1024 * 1024) throw new Error('사진 한 장은 8MB 이하여야 합니다.');
+        const photo = await api<Photo>('/media/v1/review-photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: blob,
+        });
+        setPhotos((current) => [...current, { ...photo, preview: asset.uri }]);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  useEffect(() => {
-    const r = existing.data;
-    if (!r) return;
-    setRating(r.rating);
-    setDate(r.date);
-    setContent(r.content ?? '');
-    setGenre(r.genre_list);
-    setSuccess(r.is_success === null ? null : Number(r.is_success));
-    setNumbers({
-      people_size: r.people_size?.toString() ?? '',
-      hint_count: r.hint_count?.toString() ?? '',
-      played_time: r.played_time?.toString() ?? '',
-    });
-    setDetails({ difficulty: r.difficulty, horrorness: r.horrorness, physicality: r.physicality });
-  }, [existing.data]);
   async function save() {
     if (rating === null || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError('평점과 플레이 날짜(YYYY-MM-DD)를 입력해주세요.');
@@ -66,6 +107,7 @@ function Editor() {
     setBusy(true);
     setError('');
     const payload = {
+      photo_ids: photos.map((p) => p.id),
       rating,
       date,
       content: content.trim() || null,
@@ -81,7 +123,7 @@ function Editor() {
         reviewId ? `/review/v1/${reviewId}` : '/review/v1',
         json(reviewId ? 'PATCH' : 'POST', reviewId ? payload : { ...payload, theme_id: themeId }),
       );
-      router.replace('/me');
+      router.dismissTo('/me');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -92,15 +134,13 @@ function Editor() {
     setBusy(true);
     try {
       await api(`/review/v1/${reviewId}`, json('DELETE'));
-      router.replace('/me');
+      router.dismissTo('/me');
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
-  if (reviewId && !existing.data)
-    return <Feedback loading={existing.loading} error={existing.error} retry={existing.reload} />;
   return (
     <>
       <Feedback
@@ -175,10 +215,39 @@ function Editor() {
         />
         <Text style={styles.muted}>리뷰 내용에서 정해진 주제 키워드를 자동으로 찾아요.</Text>
       </View>
+      <View style={styles.card}>
+        <Text style={styles.heading}>리뷰 사진 · {photos.length}/5</Text>
+        <Text style={styles.muted}>
+          JPEG·PNG·WebP, 한 장당 8MB까지. 사진은 리뷰와 함께 공개돼요.
+        </Text>
+        <View style={styles.row}>
+          {photos.map((photo, index) => (
+            <View key={photo.id} style={{ gap: 6 }}>
+              <Image
+                source={{ uri: photo.preview ?? photoUrl(photo.url) }}
+                accessibilityLabel={`첨부 사진 ${index + 1}`}
+                style={{ width: 130, height: 130, borderRadius: 12 }}
+              />
+              <Button
+                secondary
+                title={`사진 ${index + 1} 삭제`}
+                disabled={busy || uploading}
+                onPress={() => setPhotos((current) => current.filter((p) => p.id !== photo.id))}
+              />
+            </View>
+          ))}
+        </View>
+        <Button
+          secondary
+          title={uploading ? '사진을 올리고 있어요…' : '사진 첨부'}
+          disabled={busy || uploading || photos.length >= 5}
+          onPress={pickPhotos}
+        />
+      </View>
       <Feedback error={error} />
       <Button
         title={busy ? '기록을 저장하고 있어요…' : reviewId ? '수정한 기록 저장' : '방자취 남기기'}
-        disabled={busy || !theme.data}
+        disabled={busy || uploading || !theme.data}
         onPress={save}
       />
       {reviewId && (
@@ -188,14 +257,14 @@ function Editor() {
               <Text style={styles.text}>
                 리뷰를 삭제하면 플레이 완료 기록과 캘린더에서도 사라져요.
               </Text>
-              <Button title="리뷰 삭제 확정" disabled={busy} onPress={remove} />
+              <Button title="리뷰 삭제 확정" disabled={busy || uploading} onPress={remove} />
               <Button secondary title="취소" onPress={() => setConfirmDelete(false)} />
             </>
           ) : (
             <Button
               secondary
               title="이 리뷰 삭제"
-              disabled={busy}
+              disabled={busy || uploading}
               onPress={() => setConfirmDelete(true)}
             />
           )}

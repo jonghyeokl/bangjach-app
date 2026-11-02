@@ -35,10 +35,15 @@ export type Theme = {
   description?: string;
   website?: string | null;
 };
+export type Photo = { id: string; url: string };
 export type Review = {
+  photos: Photo[];
   id: string;
   theme_id: string;
   theme_name: string;
+  theme_image_url: string | null;
+  created_dt: string;
+  updated_dt: string;
   cafe_name: string;
   author: PublicUser;
   rating: number;

@@ -119,7 +119,7 @@ function Friends() {
               secondary
               title="캘린더"
               onPress={() =>
-                router.push({ pathname: '/calendar', params: { userId: f.friend.id } })
+                router.navigate({ pathname: '/calendar', params: { userId: f.friend.id } })
               }
             />
             <Button

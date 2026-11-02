@@ -11,6 +11,7 @@ let tokens: Tokens | null = null;
 let generation = 0;
 let persistence: Promise<void> = Promise.resolve();
 let refreshPromise: Promise<boolean> | null = null;
+let restorePromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 export const auth = {
   user: () => tokens?.user ?? null,
@@ -20,26 +21,38 @@ export const auth = {
       listeners.delete(listener);
     };
   },
-  async restore() {
-    if (Platform.OS === 'web') return;
-    const saved = await SecureStore.getItemAsync('bangjach.session');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (
-          typeof parsed?.access_token !== 'string' ||
-          typeof parsed?.refresh_token !== 'string' ||
-          typeof parsed?.user?.id !== 'string'
-        )
-          throw new Error('Invalid session');
-        tokens = parsed;
-      } catch {
-        await SecureStore.deleteItemAsync('bangjach.session');
-      }
-      listeners.forEach((fn) => fn());
-    }
+  restore() {
+    // Strict Mode may run the provider effect twice; rotate a stored refresh token only once.
+    restorePromise ??= restoreSession();
+    return restorePromise;
   },
 };
+async function restoreSession() {
+  if (Platform.OS === 'web') return;
+  const current = generation;
+  const saved = await SecureStore.getItemAsync('bangjach.session');
+  if (!saved || current !== generation) return;
+  try {
+    const parsed = JSON.parse(saved);
+    if (
+      typeof parsed?.access_token !== 'string' ||
+      typeof parsed?.refresh_token !== 'string' ||
+      typeof parsed?.user?.id !== 'string'
+    )
+      throw new Error('Invalid session');
+    tokens = parsed;
+  } catch {
+    await save(null);
+    return;
+  }
+  try {
+    // Verify the saved session and persist rotated tokens before opening the main screen.
+    await renew();
+  } catch {
+    // A temporary connection failure does not discard a locally saved login.
+  }
+  listeners.forEach((fn) => fn());
+}
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -49,9 +62,7 @@ export class ApiError extends Error {
   }
 }
 async function save(value: Tokens | null) {
-  tokens = value;
-  generation++;
-  listeners.forEach((fn) => fn());
+  const current = ++generation;
   if (Platform.OS !== 'web') {
     persistence = persistence
       .catch(() => undefined)
@@ -61,6 +72,9 @@ async function save(value: Tokens | null) {
       });
     await persistence;
   }
+  if (current !== generation) return;
+  tokens = value;
+  listeners.forEach((fn) => fn());
 }
 async function raw(path: string, options: RequestInit = {}) {
   return fetch(API_URL + path, {
