@@ -41,7 +41,7 @@ export default function ThemeDetail() {
   const t = theme.data;
   return (
     <Screen
-      title={t?.name ?? '테마 이야기'}
+      title={t?.name ?? '테마 정보'}
       subtitle={t ? `${t.cafe.name} · ${t.length}분` : undefined}
     >
       <Feedback loading={theme.loading} error={theme.error || error} retry={theme.reload} />

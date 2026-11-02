@@ -95,6 +95,7 @@ export function Screen({
 }) {
   const navigation = useRouter();
   const inTabs = useSegments()[0] === '(tabs)';
+  const { user } = useSession();
   return (
     <SafeAreaView
       style={styles.page}
@@ -104,15 +105,30 @@ export function Screen({
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.content}
+        >
           <View style={styles.row}>
-            <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
-            {!inTabs && navigation.canGoBack() && (
+            {inTabs ? (
+              <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
+            ) : (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="뒤로"
-                onPress={() => navigation.back()}
-                style={{ padding: 8 }}
+                onPress={() =>
+                  navigation.canGoBack()
+                    ? navigation.back()
+                    : navigation.replace(user ? '/' : '/welcome')
+                }
+                style={{
+                  paddingVertical: 8,
+                  paddingRight: 16,
+                  minHeight: 44,
+                  justifyContent: 'center',
+                }}
               >
                 <Text style={styles.text}>← 뒤로</Text>
               </Pressable>

@@ -109,3 +109,34 @@ test('damaged stored session is removed', async () => {
   assert.equal(client.auth.user(), null);
   assert.equal(storage.has(key), false);
 });
+
+test('profile refresh updates administrator permission without signing in again', async () => {
+  const storage = new Map();
+  let admin = false;
+  const client = app(storage, async (url) =>
+    url.endsWith('/me')
+      ? ok({ ...user, is_admin: admin })
+      : ok({ ...session, user: { ...user, is_admin: false } }),
+  );
+  await client.login(user.phone_number, 'password');
+  admin = true;
+  await client.auth.refreshUser();
+  assert.equal(client.auth.user().is_admin, true);
+  assert.equal(JSON.parse(storage.get(key)).user.is_admin, true);
+  admin = false;
+  await client.auth.refreshUser();
+  assert.equal(client.auth.user().is_admin, false);
+});
+
+test('resource version changes on successful mutations, not reads or failed writes', async () => {
+  const client = app(new Map(), async (url) =>
+    url.endsWith('/failed') ? new Response('{}', { status: 403 }) : ok({}),
+  );
+  const original = client.getResourceVersion();
+  await client.api('/items');
+  assert.equal(client.getResourceVersion(), original);
+  await assert.rejects(client.api('/failed', { method: 'POST' }));
+  assert.equal(client.getResourceVersion(), original);
+  await client.api('/items', { method: 'POST' });
+  assert.equal(client.getResourceVersion(), original + 1);
+});

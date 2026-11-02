@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { auth } from './api';
+import { AppState } from 'react-native';
 import type { User } from './types';
 
 const Context = createContext<{ user: User | null; ready: boolean }>({ user: null, ready: false });
@@ -10,11 +11,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const off = auth.subscribe(() => setUser(auth.user()));
     auth
       .restore()
+      .then(() => {
+        void auth.refreshUser().catch(() => undefined);
+      })
       .catch(() => {
         setUser(null);
       })
       .finally(() => setReady(true));
-    return off;
+    const foreground = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void auth.refreshUser().catch(() => undefined);
+    });
+    return () => {
+      off();
+      foreground.remove();
+    };
   }, []);
   return <Context.Provider value={{ user, ready }}>{children}</Context.Provider>;
 }

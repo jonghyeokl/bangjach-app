@@ -55,11 +55,11 @@ export default function Explore() {
     setPage(1);
   }
   return (
-    <Screen title="다음 이야기를 찾아요" subtitle="함께 풀고, 오래 기억할 방탈출 테마.">
+    <Screen title="다음 발자국을 남기세요" subtitle="함께 풀고, 오래 기억할 방탈출 테마.">
       <View style={styles.card}>
         <Field
           label="테마 또는 카페"
-          placeholder="어떤 이야기를 찾고 있나요?"
+          placeholder="어떤 테마를 찾고 있나요?"
           value={q}
           onChangeText={setQ}
           onSubmitEditing={search}

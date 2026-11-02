@@ -17,7 +17,7 @@ export default function Welcome() {
           <Text accessibilityRole="header" style={welcome.title}>
             방자취
           </Text>
-          <Text style={welcome.description}>방을 탈출하고, 나만의 이야기를 남겨요.</Text>
+          <Text style={welcome.description}>방을 탈출하고, 나만의 발자국을 남겨요.</Text>
         </View>
         <View style={welcome.actions}>
           <Button

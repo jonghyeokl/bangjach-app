@@ -18,7 +18,7 @@ export default function Feed() {
   const [page, setPage] = useState(1);
   const rows = useResource<Page<Review>>(`/feed/v1?page=${page}`);
   return (
-    <Screen title="피드" subtitle="친구들이 남긴 방탈출 이야기를 최신순으로 만나보세요.">
+    <Screen title="피드" subtitle="친구들이 남긴 발자국을 최신순으로 만나보세요.">
       <View style={[styles.row, { justifyContent: 'space-between' }]}>
         <Text style={styles.muted}>리뷰 작성일 최신순</Text>
         <Button
@@ -85,7 +85,7 @@ export default function Feed() {
       ))}
       {rows.data?.total === 0 && (
         <>
-          <Empty text="아직 친구들의 리뷰가 없어요. 친구를 추가하면 친구가 남긴 이야기가 여기에 모여요." />
+          <Empty text="아직 친구들의 리뷰가 없어요. 친구를 추가하면 친구가 남긴 발자국이 여기에 모여요." />
           <Button secondary title="친구 찾기" onPress={() => router.push('/friends')} />
         </>
       )}

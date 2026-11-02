@@ -25,7 +25,7 @@ export default function CalendarScreen() {
   const { userId } = useLocalSearchParams<{ userId?: string }>();
   const initialTarget = userId ?? user?.id ?? '';
   return (
-    <Screen title="기억을 모은 달력" subtitle="그날 풀었던 이야기를 다시 꺼내보세요.">
+    <Screen title="기억을 모은 달력" subtitle="그날 남긴 발자국을 다시 돌아보세요.">
       <Guard>
         <Calendar key={`${user?.id}:${initialTarget}`} initialTarget={initialTarget} />
       </Guard>

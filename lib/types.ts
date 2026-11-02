@@ -1,5 +1,5 @@
 export type PublicUser = { id: string; name: string };
-export type User = PublicUser & { phone_number: string };
+export type User = PublicUser & { phone_number: string; is_admin: boolean };
 export type Page<T> = { items: T[]; total: number; page: number; page_size: number };
 export type Option = { value: number; label: string };
 export type Enums = Record<

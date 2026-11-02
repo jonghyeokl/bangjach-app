@@ -14,7 +14,7 @@ const scores = Array.from({ length: 9 }, (_, i) => ({
 const fields = ['difficulty', 'horrorness', 'physicality'] as const;
 export default function ReviewEditor() {
   return (
-    <Screen title="오늘의 방자취" subtitle="평점과 플레이 날짜를 남기면 기록이 시작돼요.">
+    <Screen title="오늘의 발자국" subtitle="평점과 플레이 날짜를 남기면 기록이 시작돼요.">
       <Guard>
         <Editor />
       </Guard>
@@ -206,7 +206,7 @@ function ReviewForm({
           />
         ))}
         <Field
-          label="이야기를 남겨주세요"
+          label="발자국을 남겨주세요"
           placeholder="스포일러 없이, 기억에 남은 순간은 어땠나요?"
           value={content}
           onChangeText={setContent}
@@ -246,7 +246,7 @@ function ReviewForm({
       </View>
       <Feedback error={error} />
       <Button
-        title={busy ? '기록을 저장하고 있어요…' : reviewId ? '수정한 기록 저장' : '방자취 남기기'}
+        title={busy ? '기록을 저장하고 있어요…' : reviewId ? '수정한 기록 저장' : '발자국 남기기'}
         disabled={busy || uploading || !theme.data}
         onPress={save}
       />

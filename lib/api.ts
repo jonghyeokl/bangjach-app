@@ -12,6 +12,8 @@ let generation = 0;
 let persistence: Promise<void> = Promise.resolve();
 let refreshPromise: Promise<boolean> | null = null;
 let restorePromise: Promise<void> | null = null;
+let resourceVersion = 0;
+export const getResourceVersion = () => resourceVersion;
 const listeners = new Set<() => void>();
 export const auth = {
   user: () => tokens?.user ?? null,
@@ -25,6 +27,13 @@ export const auth = {
     // Strict Mode may run the provider effect twice; rotate a stored refresh token only once.
     restorePromise ??= restoreSession();
     return restorePromise;
+  },
+  async refreshUser() {
+    if (!tokens) return;
+    const current = generation;
+    const user = await api<User>('/user/v1/me');
+    if (tokens && current === generation && JSON.stringify(tokens.user) !== JSON.stringify(user))
+      await save({ ...tokens, user });
   },
 };
 async function restoreSession() {
@@ -73,6 +82,7 @@ async function save(value: Tokens | null) {
     await persistence;
   }
   if (current !== generation) return;
+  if (tokens?.user.id !== value?.user.id) resourceVersion++;
   tokens = value;
   listeners.forEach((fn) => fn());
 }
@@ -129,6 +139,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         : (data.error?.message ?? `요청에 실패했어요 (${res.status})`),
     );
   }
+  if (!['GET', 'HEAD'].includes(options.method?.toUpperCase() ?? 'GET')) resourceVersion++;
   return res.status === 204 ? (undefined as T) : res.json();
 }
 export const json = (method: string, body?: unknown): RequestInit => ({
