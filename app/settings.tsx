@@ -25,7 +25,10 @@ function Form() {
   );
 }
 function SettingsForm({ initial }: { initial: Settings }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState({
+    ...initial,
+    party_search_publicity: initial.party_search_publicity === 1 ? 1 : 2,
+  });
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -61,7 +64,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
               <Choices
                 options={[
                   { value: 2, label: '친구만' },
-                  { value: 3, label: '전체' },
+                  ...(key === 'calendar_publicity' ? [{ value: 3, label: '전체' }] : []),
                   { value: 1, label: '비공개' },
                 ]}
                 selected={[value[key]]}
