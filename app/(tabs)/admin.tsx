@@ -150,6 +150,8 @@ function ThemeForm({
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
         allowsMultipleSelection: false,
         quality: 0.8,
       });

@@ -71,6 +71,8 @@ function ReviewForm({
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
         allowsMultipleSelection: true,
         selectionLimit: 5 - photos.length,
         quality: 0.8,
