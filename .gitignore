@@ -11,3 +11,6 @@ expo-env.d.ts
 *.log
 test-results/
 playwright-report/
+
+# Third-party test data and downloaded photos stay local.
+test-data/

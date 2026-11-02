@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test:auth": "node --test tests/auth.test.cjs",
     "format": "prettier --write app components lib tests playwright.config.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "collect:bbabang": "node scripts/bbabang/collect.cjs",
+    "test:collector": "node --test tests/bbabang.test.cjs"
   },
   "dependencies": {
     "expo": "~58.0.22",

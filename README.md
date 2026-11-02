@@ -112,3 +112,7 @@ Playwright가 localhost:8081의 Expo 웹을 시작하고 모바일 폭에서 시
 [관리자 등록 화면](docs/screenshots/admin-mobile.png), [마이페이지](docs/screenshots/me-mobile.png)
 
 이번 변경 검증: 관리자 등록·일반 계정 접근 차단/탭 데이터 유지·기존 전체 여정의 브라우저 테스트 4개(테마 사진 업로드·친구 한정 일행 검색 포함), 로그인/권한 갱신/데이터 갱신/사진 전송 테스트 8개, 타입·린트 및 iOS/Android/Web 번들 생성 통과. 실기기 UI는 별도 확인이 필요하다.
+
+## 빠방 테스트 데이터 수집
+
+`npm run collect:bbabang`으로 브라우저 수집 스크립트를 생성한다. 전국·예약 가능/안 한 테마 해제·추천도 높은 순의 광고 슬롯 제외 상위 30개를 JSON으로 저장한 뒤 `npm run collect:bbabang -- --input ~/Downloads/bbabang-top30.json`으로 CSV·사진 파일을 만든다. 실행법과 App Check 제한은 [수집 문서](docs/bbabang-collector.md)를 참고한다. 결과는 로컬에만 저장하며 운영 DB에는 입력하지 않는다.

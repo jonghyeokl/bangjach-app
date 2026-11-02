@@ -1,0 +1,169 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const vm = require('node:vm');
+const core = require('../scripts/bbabang/core.cjs');
+const { downloadImage, exportData } = require('../scripts/bbabang/collect.cjs');
+const request = {
+  index: 'qrooms',
+  query: '',
+  filter: [...core.FILTER],
+  sort: [...core.SORT],
+  limit: 30,
+};
+const hit = (index) => ({
+  ref_id: index + 1,
+  title: `테마 ${index + 1}`,
+  store_name: '가상 카페',
+  description: '첫 줄\n둘째 줄, "인용"',
+  poster_loc: `가상 카페/테마 ${index + 1}`,
+  playtime: 60,
+  store_homepage: 'https://example.com',
+  recommendTotalRating: 1 - index / 100,
+  isRecommendedTotal: 100 - index,
+});
+const payload = () => ({
+  result: { offset: 0, hits: Array.from({ length: 30 }, (_, i) => hit(i)) },
+});
+const sample = () => core.dataset(payload(), request);
+
+test('only nationwide unfiltered recommendation order is accepted', () => {
+  assert.equal(core.isRequestedSearch(request), true);
+  for (const patch of [
+    { query: '검색' },
+    { index: 'stores' },
+    { sort: ['isRecommendedTotal:desc'] },
+    { filter: [...core.FILTER, 'area = 서울'] },
+    { filter: [...core.FILTER, 'reserve_times_d0 != ""'] },
+    { filter: [...core.FILTER, 'ref_id NOT IN [1]'] },
+  ])
+    assert.equal(core.isRequestedSearch({ ...request, ...patch }), false);
+});
+
+test('30 organic rows preserve rank, description and encoded photo path', () => {
+  const data = sample();
+  assert.equal(data.themes.length, 30);
+  assert.equal(data.themes[29].rank, 30);
+  assert.equal(data.themes[0].description, '첫 줄\n둘째 줄, "인용"');
+  assert.equal(decodeURI(data.themes[0].image_url), 'https://cdn.keigon.net/가상 카페/테마 1');
+  assert.deepEqual(data.themes[0].missing_fields, []);
+  assert.deepEqual(core.validateExport(data), data);
+  assert.throws(() => core.dataset({ result: { ad: hit(0) } }, request));
+});
+
+test('wrong ordering, duplicates, non-first pages, and incomplete batches fail closed', () => {
+  for (const change of [
+    (p) => p.result.hits.reverse(),
+    (p) => p.result.hits.splice(1, 1, hit(0)),
+    (p) => p.result.hits.pop(),
+    (p) => {
+      p.result.offset = 20;
+    },
+  ]) {
+    const p = payload();
+    change(p);
+    assert.throws(() => core.dataset(p, request));
+  }
+  const p = payload();
+  p.result.hits.unshift({ ...hit(99), is_ad: true });
+  assert.equal(core.dataset(p, request).themes[0].source_id, 1);
+});
+
+test('missing source values are explicit and CSV resists formula injection', () => {
+  const p = payload();
+  Object.assign(p.result.hits[0], {
+    description: '',
+    playtime: null,
+    poster_loc: '',
+    store_homepage: '',
+  });
+  const data = core.dataset(p, request);
+  assert.deepEqual(data.themes[0].missing_fields, [
+    'image_url',
+    'length_minutes',
+    'description',
+    'website',
+  ]);
+  data.themes[1].theme_name = '=HYPERLINK("x")';
+  const csv = core.csv(data);
+  assert.ok(csv.startsWith('\ufeff'));
+  assert.ok(csv.includes('"\'=HYPERLINK(""x"")"'));
+  assert.ok(csv.includes('첫 줄\n둘째 줄, ""인용""'));
+});
+
+test('image downloads validate origin and actual bytes; failures remain visible', async () => {
+  await assert.rejects(downloadImage('http://127.0.0.1/photo'));
+  await assert.rejects(
+    downloadImage('https://cdn.keigon.net/a', async () => new Response('<html>')),
+  );
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bbabang-test-'));
+  try {
+    const data = sample();
+    let calls = 0;
+    const fetcher = async () =>
+      ++calls === 1
+        ? new Response('missing', { status: 404 })
+        : new Response(Buffer.from([0xff, 0xd8, 0xff, 0, 1]));
+    const result = await exportData(data, tmp, { fetcher, delay: 0 });
+    assert.equal(result.image_download.succeeded, 29);
+    assert.equal(result.image_download.failures.length, 1);
+    assert.equal(result.themes[0].image_file, null);
+    assert.equal((await fs.readdir(path.join(tmp, 'images'))).length, 29);
+    assert.equal(JSON.parse(await fs.readFile(path.join(tmp, 'themes.json'), 'utf8')).count, 30);
+    assert.ok((await fs.readFile(path.join(tmp, 'themes.csv'), 'utf8')).startsWith('\ufeff'));
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('browser hook preserves auth, changes only batch size and ignores ad requests', async () => {
+  const source = await fs.readFile(path.join(__dirname, '../scripts/bbabang/browser.js'), 'utf8');
+  const elements = [];
+  const element = () => {
+    const e = { style: {}, append() {}, remove() {}, click() {} };
+    elements.push(e);
+    return e;
+  };
+  const calls = [];
+  const original = async (input) => {
+    const req = new Request(input);
+    calls.push({
+      url: req.url,
+      body: await req.json(),
+      header: req.headers.get('X-Firebase-AppCheck'),
+    });
+    return new Response(
+      JSON.stringify(req.url.endsWith('/selectAd') ? { result: { ad: hit(99) } } : payload()),
+    );
+  };
+  const window = { fetch: original, BbabangCollectorCore: core };
+  vm.runInNewContext(source, {
+    window,
+    location: { origin: 'https://bbabang.net', href: 'https://bbabang.net/#home' },
+    document: { createElement: element, body: { append() {} } },
+    Request,
+    URL,
+    Blob,
+    setTimeout,
+  });
+  const send = (endpoint, data) =>
+    window.fetch(
+      new Request(`https://asia-northeast3-roomescape-app-mvp.cloudfunctions.net/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Firebase-AppCheck': 'test-only-token' },
+        body: JSON.stringify({ data }),
+      }),
+    );
+  await send('selectAd', {});
+  assert.equal(window.bbangCollector.getResult(), null);
+  await send('meiliSearch', { ...request, sort: ['isRecommendedTotal:desc'], limit: 20 });
+  assert.equal(window.bbangCollector.getResult(), null);
+  await send('meiliSearch', { ...request, limit: 20 });
+  assert.deepEqual(calls[2].body, { data: request });
+  assert.equal(calls[2].header, 'test-only-token');
+  assert.equal(window.bbangCollector.getResult().count, 30);
+  assert.equal(window.fetch, original);
+  assert.ok(!JSON.stringify(window.bbangCollector.getResult()).includes('test-only-token'));
+});
