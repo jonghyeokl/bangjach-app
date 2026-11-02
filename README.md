@@ -115,4 +115,4 @@ Playwright가 localhost:8081의 Expo 웹을 시작하고 모바일 폭에서 시
 
 ## 빠방 테스트 데이터 수집
 
-광고 슬롯을 제외한 상위 200개 수집부터 사진 처리·DB 등록까지: [실행 방법](docs/bbabang-collector.md).
+광고 슬롯을 제외한 상위 100개 수집부터 사진 처리·DB 등록까지: [실행 방법](docs/bbabang-collector.md).

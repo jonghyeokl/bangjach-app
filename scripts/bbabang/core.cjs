@@ -2,7 +2,7 @@
 (function (root) {
   const FILTER = ['isopen != false', 'store_isopen != false'];
   const SORT = ['recommendTotalRating:desc'];
-  const COUNT = 200;
+  const COUNT = 100;
   function isRequestedSearch(data) {
     return (
       data?.index === 'qrooms' &&
@@ -50,7 +50,6 @@
     if (selected.length !== COUNT)
       throw new Error(`${COUNT}개가 필요하지만 ${selected.length}개만 받았습니다.`);
     const seen = new Set();
-    let previous = null;
     const themes = selected.map((hit, index) => {
       if (!Number.isSafeInteger(hit.ref_id) || !text(hit.title) || !text(hit.store_name)) {
         throw new Error('테마 ID·테마명·카페명 필드가 누락되었습니다.');
@@ -62,10 +61,6 @@
       const count = hit.isRecommendedTotal;
       if (!Number.isFinite(score) || !Number.isFinite(count))
         throw new Error('추천도 필드가 없습니다.');
-      if (previous && previous.score < score) {
-        throw new Error('검색 결과가 추천도 내림차순이 아닙니다.');
-      }
-      previous = { score, count };
       const photo = imageUrl(hit.poster_loc) ?? imageUrl(hit.thumb_loc);
       const length = Number(hit.playtime);
       const row = {

@@ -76,7 +76,7 @@ async function main() {
   });
   if (values.help) {
     console.log(
-      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top200.json [--import-db [--apply]] [--photo-bucket NAME] [--local-photos] [--output DIR]',
+      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top100.json [--import-db [--apply]] [--photo-bucket NAME] [--local-photos] [--output DIR]',
     );
     return;
   }
