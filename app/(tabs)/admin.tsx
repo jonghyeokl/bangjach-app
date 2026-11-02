@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import { Image, Platform, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Redirect } from 'expo-router';
 import { Button, Choices, Empty, Feedback, Field, Pager, Screen, styles } from '@/components/ui';
 import { api, json, query } from '@/lib/api';
 import { useResource } from '@/lib/hooks';
@@ -44,11 +45,7 @@ export default function Admin() {
         />
       </View>
       <View style={{ display: mode === 'theme' ? 'flex' : 'none' }}>
-        <ThemeForm
-          cafe={selectedCafe}
-          onSelect={setSelectedCafe}
-          onAddCafe={() => setMode('cafe')}
-        />
+        <ThemeForm cafe={selectedCafe} onSelect={setSelectedCafe} />
       </View>
     </Screen>
   );
@@ -130,11 +127,9 @@ function CafeForm({ onCreated }: { onCreated: (cafe: Cafe) => void }) {
 function ThemeForm({
   cafe,
   onSelect,
-  onAddCafe,
 }: {
   cafe: Cafe | null;
   onSelect: (cafe: Cafe | null) => void;
-  onAddCafe: () => void;
 }) {
   const [text, setText] = useState('');
   const [q, setQ] = useState('');
@@ -143,11 +138,33 @@ function ThemeForm({
   const [name, setName] = useState('');
   const [length, setLength] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [picking, setPicking] = useState(false);
   const [website, setWebsite] = useState('');
   const [created, setCreated] = useState<Theme | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  async function pickPhoto() {
+    setError('');
+    setPicking(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if ((asset.fileSize ?? asset.file?.size ?? 0) > 8 * 1024 * 1024) {
+        throw new Error('사진 한 장은 8MB 이하여야 합니다.');
+      }
+      setPhoto(asset);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPicking(false);
+    }
+  }
   function search() {
     setQ(text.trim());
     setPage(1);
@@ -162,22 +179,40 @@ function ThemeForm({
     }
     setBusy(true);
     try {
-      const result = await api<Theme>(
-        '/theme/v1',
-        json('POST', {
-          cafe_id: cafe.id,
-          name: name.trim(),
-          length: Number(length),
-          description: description.trim(),
-          image_url: optionalUrl(imageUrl),
-          website: optionalUrl(website),
-        }),
-      );
+      const payload = {
+        cafe_id: cafe.id,
+        name: name.trim(),
+        length: Number(length),
+        description: description.trim(),
+        website: optionalUrl(website),
+      };
+      let result: Theme;
+      if (photo) {
+        const body = new FormData();
+        body.append('data', JSON.stringify(payload));
+        if (Platform.OS === 'web') {
+          const file = photo.file ?? (await (await fetch(photo.uri)).blob());
+          if (file.size > 8 * 1024 * 1024) {
+            throw new Error('사진 한 장은 8MB 이하여야 합니다.');
+          }
+          body.append('photo', file, photo.fileName ?? 'theme.jpg');
+        } else {
+          // React Native's FormData uploads local files by URI.
+          body.append('photo', {
+            uri: photo.uri,
+            name: photo.fileName ?? 'theme.jpg',
+            type: photo.mimeType ?? 'image/jpeg',
+          } as unknown as Blob);
+        }
+        result = await api<Theme>('/theme/v1/with-photo', { method: 'POST', body });
+      } else {
+        result = await api<Theme>('/theme/v1', json('POST', payload));
+      }
       setCreated(result);
       setName('');
       setLength('');
       setDescription('');
-      setImageUrl('');
+      setPhoto(null);
       setWebsite('');
     } catch (e) {
       setError((e as Error).message);
@@ -218,7 +253,6 @@ function ThemeForm({
             {cafes.data && <Pager page={page} total={cafes.data.total} onChange={setPage} />}
           </>
         )}
-        <Button secondary title="새 카페 추가하기" onPress={onAddCafe} />
       </View>
       <View style={styles.card}>
         <Text style={styles.heading}>테마 등록</Text>
@@ -237,15 +271,26 @@ function ThemeForm({
           multiline
           maxLength={10000}
         />
-        <Field
-          label="테마 사진 URL"
-          value={imageUrl}
-          onChangeText={setImageUrl}
-          placeholder="https://… (선택)"
-          autoCapitalize="none"
-          keyboardType="url"
-          maxLength={2000}
-        />
+        <Text style={styles.text}>테마 사진</Text>
+        {photo && (
+          <Image
+            source={{ uri: photo.uri }}
+            accessibilityLabel="선택한 테마 사진"
+            style={{ width: '100%', height: 220, borderRadius: 12 }}
+            resizeMode="contain"
+          />
+        )}
+        <View style={styles.row}>
+          <Button
+            secondary
+            title={picking ? '사진 선택 중…' : photo ? '사진 변경' : '사진 첨부'}
+            disabled={busy || picking}
+            onPress={pickPhoto}
+          />
+          {photo && (
+            <Button secondary title="사진 삭제" disabled={busy} onPress={() => setPhoto(null)} />
+          )}
+        </View>
         <Field
           label="테마 홈페이지"
           value={website}
@@ -261,14 +306,13 @@ function ThemeForm({
             <Text accessibilityLiveRegion="polite" style={styles.text}>
               {created.name} 테마를 추가했어요.
             </Text>
-            <Button
-              secondary
-              title="추가한 테마 보기"
-              onPress={() => router.push({ pathname: '/theme/[id]', params: { id: created.id } })}
-            />
           </View>
         )}
-        <Button title={busy ? '등록 중…' : '테마 등록'} disabled={busy} onPress={submit} />
+        <Button
+          title={busy ? '등록 중…' : '테마 등록'}
+          disabled={busy || picking}
+          onPress={submit}
+        />
       </View>
     </View>
   );

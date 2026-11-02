@@ -91,7 +91,7 @@ async function raw(path: string, options: RequestInit = {}) {
     ...options,
     signal: AbortSignal.timeout(20000),
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(tokens ? { Authorization: `Bearer ${tokens.access_token}` } : {}),
       ...options.headers,
     },

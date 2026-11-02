@@ -36,6 +36,7 @@ function app(storage, fetch) {
     fetch,
     AbortSignal,
     URLSearchParams,
+    FormData,
   });
   return exports;
 }
@@ -61,6 +62,20 @@ test('native login persists before announcing login; restarting restores and rot
   assert.equal(refreshes, 1);
   assert.equal(restarted.auth.user().id, user.id);
   assert.equal(JSON.parse(storage.get(key)).refresh_token, 'refresh-new');
+});
+
+test('photo forms preserve the multipart body and let fetch choose its boundary', async () => {
+  const body = new FormData();
+  body.append('data', '{"name":"test"}');
+  body.append('photo', new Blob(['photo']), 'photo.jpg');
+  const client = app(new Map(), async (url, options) => {
+    assert.equal(options.body, body);
+    assert.equal(options.headers['Content-Type'], undefined);
+    return ok({ id: 'theme' });
+  });
+  assert.deepEqual(await client.api('/theme/v1/with-photo', { method: 'POST', body }), {
+    id: 'theme',
+  });
 });
 
 test('expired or revoked saved session is cleared', async () => {

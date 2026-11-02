@@ -22,6 +22,8 @@ test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로�
   expect(box!.height).toBeGreaterThanOrEqual(44);
   expect(box!.y).toBeLessThan(800);
   await admin.click();
+  await expect(page.getByRole('button', { name: '새 카페 추가하기', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('테마 사진 URL', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '카페 추가', exact: true }).click();
   await page.getByRole('button', { name: '카페 등록', exact: true }).click();
   await expect(text('카페명·지역·주소·전화번호를 입력해주세요.')).toBeVisible();
@@ -41,13 +43,29 @@ test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로�
   await page.getByLabel('테마명 *', { exact: true }).fill(themeName);
   await page.getByLabel('제한 시간 (분) *', { exact: true }).fill('60');
   await page.getByLabel('테마 설명', { exact: true }).fill('관리자 등록 테스트');
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '사진 첨부', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/review-photo.png');
+  await expect(page.getByRole('img', { name: '선택한 테마 사진' })).toBeVisible();
+  await page.getByRole('button', { name: '사진 삭제', exact: true }).click();
+  await expect(page.getByRole('img', { name: '선택한 테마 사진' })).toHaveCount(0);
+  const again = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '사진 첨부', exact: true }).click();
+  await (await again).setFiles('tests/fixtures/review-photo.png');
+  const uploaded = page.waitForResponse((r) => r.url().endsWith('/theme/v1/with-photo'));
   await page.getByRole('button', { name: '테마 등록', exact: true }).click();
+  const response = await uploaded;
+  expect(response.status()).toBe(201);
+  const saved = await response.json();
+  const photo = await page.request.get('http://127.0.0.1:8000' + saved.image_url);
+  expect(photo.headers()['content-type']).toBe('image/jpeg');
   await expect(text(`${themeName} 테마를 추가했어요.`)).toBeVisible();
   await page.screenshot({ path: 'test-results/admin-mobile.png', fullPage: true });
   await page.getByRole('tab', { name: '테마 검색', exact: true }).click();
   await expect(text(themeName)).toBeVisible();
   await page.getByRole('button', { name: new RegExp(themeName) }).click();
   await expect(text('관리자 등록 테스트')).toBeVisible();
+  await expect(page.locator('img').filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: '뒤로', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '뒤로', exact: true }).click();
   await page.getByRole('tab', { name: '마이페이지', exact: true }).click();
@@ -93,4 +111,52 @@ test('일반 계정은 관리자 탭 및 직접 주소 접근 불가, 기본 탭
   await expect(
     page.getByText('다음 발자국을 남기세요', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
+});
+
+test('안 한 테마의 일행은 친구 중에서 검색하고 추가·제거한다', async ({ page, request }) => {
+  const base = 'http://127.0.0.1:8000';
+  async function headers(phone: string) {
+    const response = await request.post(base + '/user/v1/log-in', {
+      data: { phone_number: phone, password: 'test-password' },
+    });
+    return { Authorization: `Bearer ${(await response.json()).access_token}` };
+  }
+  const owner = await headers('01070000001');
+  const friend = await headers('01070000002');
+  const outsider = await headers('01070000000');
+  await request.patch(base + '/user/v1/me/settings', {
+    headers: outsider,
+    data: { party_search_publicity: 3 },
+  });
+  const invitation = await request.post(base + '/friend-request/v1', {
+    headers: owner,
+    data: { requested_user_name: '테스트친구2' },
+  });
+  expect(invitation.status()).toBe(201);
+  const accepted = await request.post(
+    base + `/friend-request/v1/${(await invitation.json()).id}/accept`,
+    {
+      headers: friend,
+    },
+  );
+  expect(accepted.ok()).toBeTruthy();
+  await page.goto('/login');
+  await page.getByLabel('전화번호', { exact: true }).fill('01070000001');
+  await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: '로그인', exact: true }).click();
+  await page.getByRole('button', { name: '장르 · 점수 · 일행 필터', exact: true }).click();
+  await page.getByRole('button', { name: '안 한 테마', exact: true }).click();
+  await page.getByLabel('일행으로 추가할 친구 검색', { exact: true }).fill('테스트친구');
+  await page.getByRole('button', { name: '친구 검색', exact: true }).click();
+  await expect(page.getByRole('button', { name: '테스트친구2 추가', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '테스트친구0 추가', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '테스트친구2 추가', exact: true }).click();
+  await expect(page.getByRole('button', { name: '테스트친구2 ×', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '필터 적용', exact: true }).click();
+  await expect(page.getByRole('button', { name: /사라진 편지/ })).toHaveCount(0);
+  await page.getByRole('button', { name: '테스트친구2 ×', exact: true }).click();
+  await expect(page.getByRole('button', { name: '테스트친구2 추가', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/party-mobile.png', fullPage: true });
+  await page.getByRole('tab', { name: '피드', exact: true }).click();
+  await expect(page.getByRole('button', { name: '친구 찾기', exact: true })).toHaveCount(0);
 });

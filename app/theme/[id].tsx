@@ -8,6 +8,7 @@ import {
   Feedback,
   Field,
   Pager,
+  photoUrl,
   ReviewCard,
   Screen,
   scoreText,
@@ -49,7 +50,7 @@ export default function ThemeDetail() {
         <>
           {t.image_url && (
             <Image
-              source={{ uri: t.image_url }}
+              source={{ uri: photoUrl(t.image_url) }}
               style={{ height: 270, borderRadius: 18, width: '100%' }}
               resizeMode="cover"
             />

@@ -8,6 +8,7 @@ import {
   Empty,
   Feedback,
   Pager,
+  photoUrl,
   Screen,
   styles,
 } from '@/components/ui';
@@ -51,7 +52,7 @@ export default function Feed() {
           >
             {review.theme_image_url ? (
               <Image
-                source={{ uri: review.theme_image_url }}
+                source={{ uri: photoUrl(review.theme_image_url) }}
                 accessibilityLabel={`${review.theme_name} 테마 사진`}
                 style={{
                   width: '100%',
@@ -84,10 +85,7 @@ export default function Feed() {
         </View>
       ))}
       {rows.data?.total === 0 && (
-        <>
-          <Empty text="아직 친구들의 리뷰가 없어요. 친구를 추가하면 친구가 남긴 발자국이 여기에 모여요." />
-          <Button secondary title="친구 찾기" onPress={() => router.push('/friends')} />
-        </>
+        <Empty text="아직 친구들의 리뷰가 없어요. 친구를 추가하면 친구가 남긴 발자국이 여기에 모여요." />
       )}
       {rows.data && <Pager page={page} total={rows.data.total} onChange={setPage} />}
     </Screen>

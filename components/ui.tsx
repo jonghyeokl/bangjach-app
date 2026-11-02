@@ -291,7 +291,7 @@ export function ThemeCard({ theme }: { theme: Theme }) {
     >
       {theme.image_url ? (
         <Image
-          source={{ uri: theme.image_url }}
+          source={{ uri: photoUrl(theme.image_url) }}
           style={{ width: '100%', height: 190 }}
           resizeMode="cover"
         />

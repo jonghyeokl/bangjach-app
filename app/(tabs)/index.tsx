@@ -32,13 +32,21 @@ export default function Explore() {
   const [ranges, setRanges] = useState<Record<string, string>>({});
   const [partyText, setPartyText] = useState('');
   const [partyQ, setPartyQ] = useState('');
+  const [partyPage, setPartyPage] = useState(1);
   const [party, setParty] = useState<PublicUser[]>([]);
   const people = useResource<Page<PublicUser>>(
-    user && partyQ ? `/user/v1/search?${query({ q: partyQ, purpose: 'party' })}` : null,
+    user && exclude && partyQ
+      ? `/user/v1/search?${query({ q: partyQ, purpose: 'party', page: partyPage })}`
+      : null,
   );
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState('');
   const themes = useResource<Page<Theme>>(`/theme/v1?${filters}&page=${page}`);
+  function searchFriends() {
+    setPartyQ(partyText.trim());
+    setPartyPage(1);
+    people.reload();
+  }
   function search() {
     setFilters(
       query({
@@ -130,18 +138,20 @@ export default function Explore() {
             </View>
             <Button
               secondary={!exclude}
-              title={exclude ? '✓ 나와 일행이 안 한 테마만' : '나와 일행이 안 한 테마만'}
+              title={exclude ? '✓ 안 한 테마' : '안 한 테마'}
               onPress={() => (user ? setExclude(!exclude) : router.push('/login'))}
             />
             {exclude && (
               <>
                 <Field
-                  label="일행 닉네임"
+                  label="일행으로 추가할 친구 검색"
+                  placeholder="친구 닉네임"
                   value={partyText}
                   onChangeText={setPartyText}
-                  onSubmitEditing={() => setPartyQ(partyText)}
+                  onSubmitEditing={searchFriends}
+                  maxLength={30}
                 />
-                <Button secondary title="일행 검색" onPress={() => setPartyQ(partyText)} />
+                <Button secondary title="친구 검색" onPress={searchFriends} />
                 <Feedback loading={people.loading} error={people.error} />
                 {people.data?.items
                   .filter((p) => !party.some((x) => x.id === p.id))
@@ -150,11 +160,15 @@ export default function Explore() {
                       secondary
                       key={p.id}
                       title={`${p.name} 추가`}
+                      disabled={party.length >= 20}
                       onPress={() => setParty([...party, p])}
                     />
                   ))}
                 {people.data?.total === 0 && (
-                  <Text style={styles.muted}>공개 범위가 허용된 사용자가 없어요.</Text>
+                  <Text style={styles.muted}>일행 검색을 허용한 친구가 없어요.</Text>
+                )}
+                {people.data && (
+                  <Pager page={partyPage} total={people.data.total} onChange={setPartyPage} />
                 )}
                 <View style={styles.row}>
                   {party.map((p) => (
@@ -178,6 +192,9 @@ export default function Explore() {
                 setRanges({});
                 setExclude(false);
                 setParty([]);
+                setPartyText('');
+                setPartyQ('');
+                setPartyPage(1);
                 setSort('newest');
                 setOrder('desc');
                 setQ('');
