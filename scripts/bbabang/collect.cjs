@@ -2,6 +2,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { parseArgs } = require('node:util');
+const { spawn } = require('node:child_process');
 const core = require('./core.cjs');
 
 async function downloadImage(url, fetcher = fetch) {
@@ -66,13 +67,23 @@ async function main() {
       output: { type: 'string' },
       'no-images': { type: 'boolean' },
       help: { type: 'boolean' },
+      'import-db': { type: 'boolean' },
+      apply: { type: 'boolean' },
+      'photo-bucket': { type: 'string' },
+      'local-photos': { type: 'boolean' },
+      backend: { type: 'string' },
     },
   });
   if (values.help) {
     console.log(
-      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top30.json [--no-images] [--output DIR]',
+      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top30.json [--import-db [--apply]] [--photo-bucket NAME] [--local-photos] [--output DIR]',
     );
     return;
+  }
+  if (values.apply && !values['import-db'])
+    throw new Error('--apply는 --import-db와 함께 사용하세요.');
+  if (values['import-db'] && (!values.input || values['no-images'])) {
+    throw new Error('DB 등록에는 --input과 사진 다운로드가 필요합니다.');
   }
   const output = path.resolve(
     values.output ?? 'test-data/bbabang/' + new Date().toISOString().replace(/[:.]/g, '-'),
@@ -100,6 +111,22 @@ async function main() {
       `사진 다운로드 실패 ${data.image_download.failures.length}개: themes.json의 image_download.failures 확인`,
     );
     process.exitCode = 1;
+    return;
+  }
+  if (values['import-db']) {
+    const backend = path.resolve(values.backend ?? path.join(__dirname, '../../../bangjach'));
+    const python = path.join(backend, '.venv/bin/python');
+    await fs.access(python);
+    const args = ['-m', 'app.jobs.import_bbabang', path.join(output, 'themes.json')];
+    if (values.apply) args.push('--apply');
+    if (values['photo-bucket']) args.push('--photo-bucket', values['photo-bucket']);
+    if (values['local-photos']) args.push('--local-photos');
+    const code = await new Promise((resolve, reject) => {
+      const child = spawn(python, args, { cwd: backend, stdio: 'inherit' });
+      child.on('error', reject);
+      child.on('close', (status) => resolve(status ?? 1));
+    });
+    process.exitCode = code;
   }
 }
 module.exports = { downloadImage, exportData };

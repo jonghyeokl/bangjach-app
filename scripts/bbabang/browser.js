@@ -77,7 +77,12 @@
         );
       result = core.dataset(await response.clone().json(), adjusted.data);
       const missing = result.themes.filter((row) => row.missing_fields.length).length;
+      const missingCafes = new Set(
+        result.themes.filter((row) => row.missing_cafe_fields.length).map((row) => row.cafe_name),
+      ).size;
       message.textContent = `광고 슬롯 제외 30개 수집 완료.\n원본에 일부 항목이 없는 테마: ${missing}개\n사진 주소 포함 JSON을 저장해주세요.`;
+      if (missingCafes)
+        message.textContent += `\nDB 등록 전 카페 정보 보완 필요: ${missingCafes}곳`;
       download.hidden = false;
       stop();
     } catch (error) {

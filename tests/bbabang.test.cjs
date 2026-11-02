@@ -17,6 +17,9 @@ const hit = (index) => ({
   ref_id: index + 1,
   title: `테마 ${index + 1}`,
   store_name: '가상 카페',
+  area: '서울',
+  address: '서울특별시 가상 주소',
+  store_tel: '0200000000',
   description: '첫 줄\n둘째 줄, "인용"',
   poster_loc: `가상 카페/테마 ${index + 1}`,
   playtime: 60,
@@ -49,6 +52,14 @@ test('30 organic rows preserve rank, description and encoded photo path', () => 
   assert.equal(data.themes[0].description, '첫 줄\n둘째 줄, "인용"');
   assert.equal(decodeURI(data.themes[0].image_url), 'https://cdn.keigon.net/가상 카페/테마 1');
   assert.deepEqual(data.themes[0].missing_fields, []);
+  assert.deepEqual(data.themes[0].missing_cafe_fields, []);
+  assert.deepEqual(data.themes[0].cafe, {
+    name: '가상 카페',
+    region_label: '서울',
+    address: '서울특별시 가상 주소',
+    phone_number: '0200000000',
+    website: 'https://example.com/',
+  });
   assert.deepEqual(core.validateExport(data), data);
   assert.throws(() => core.dataset({ result: { ad: hit(0) } }, request));
 });

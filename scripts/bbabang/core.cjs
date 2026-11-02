@@ -73,6 +73,13 @@
         source_id: hit.ref_id,
         theme_name: text(hit.title),
         cafe_name: text(hit.store_name),
+        cafe: {
+          name: text(hit.store_name),
+          region_label: text(hit.area),
+          address: text(hit.address),
+          phone_number: text(hit.store_tel),
+          website: website(hit.store_homepage),
+        },
         image_url: photo,
         length_minutes: Number.isInteger(length) && length > 0 ? length : null,
         description: text(hit.description),
@@ -82,6 +89,9 @@
       };
       row.missing_fields = ['image_url', 'length_minutes', 'description', 'website'].filter(
         (key) => !row[key],
+      );
+      row.missing_cafe_fields = ['region_label', 'address', 'phone_number'].filter(
+        (key) => !row.cafe[key],
       );
       return row;
     });
