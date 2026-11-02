@@ -76,7 +76,7 @@ async function main() {
   });
   if (values.help) {
     console.log(
-      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top30.json [--import-db [--apply]] [--photo-bucket NAME] [--local-photos] [--output DIR]',
+      'npm run collect:bbabang\nnpm run collect:bbabang -- --input ~/Downloads/bbabang-top200.json [--import-db [--apply]] [--photo-bucket NAME] [--local-photos] [--output DIR]',
     );
     return;
   }
@@ -96,7 +96,7 @@ async function main() {
     const file = path.join(output, 'collector.js');
     await fs.writeFile(file, contents.join('\n'));
     console.log(
-      `브라우저 수집 스크립트: ${file}\n빠방이 정상적으로 열리는 Chrome의 개발자 도구 > Sources > Snippets에서 실행하세요.\n전국 / 예약 가능 OFF / 안 한 테마 OFF 후 정렬을 추천도 높은 순으로 바꾸면 30개를 저장할 수 있습니다.\n자세한 실행법: docs/bbabang-collector.md`,
+      `브라우저 수집 스크립트: ${file}\n빠방이 정상적으로 열리는 Chrome의 개발자 도구 > Sources > Snippets에서 실행하세요.\n전국 / 예약 가능 OFF / 안 한 테마 OFF 후 정렬을 추천도 높은 순으로 바꾸면 ${core.COUNT}개를 저장할 수 있습니다.\n자세한 실행법: docs/bbabang-collector.md`,
     );
     return;
   }

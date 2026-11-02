@@ -11,7 +11,7 @@ const request = {
   query: '',
   filter: [...core.FILTER],
   sort: [...core.SORT],
-  limit: 30,
+  limit: core.COUNT,
 };
 const hit = (index) => ({
   ref_id: index + 1,
@@ -24,11 +24,11 @@ const hit = (index) => ({
   poster_loc: `가상 카페/테마 ${index + 1}`,
   playtime: 60,
   store_homepage: 'https://example.com',
-  recommendTotalRating: 1 - index / 100,
-  isRecommendedTotal: 100 - index,
+  recommendTotalRating: 1 - index / 1000,
+  isRecommendedTotal: 1000 - index,
 });
 const payload = () => ({
-  result: { offset: 0, hits: Array.from({ length: 30 }, (_, i) => hit(i)) },
+  result: { offset: 0, hits: Array.from({ length: core.COUNT }, (_, i) => hit(i)) },
 });
 const sample = () => core.dataset(payload(), request);
 
@@ -45,10 +45,10 @@ test('only nationwide unfiltered recommendation order is accepted', () => {
     assert.equal(core.isRequestedSearch({ ...request, ...patch }), false);
 });
 
-test('30 organic rows preserve rank, description and encoded photo path', () => {
+test('200 organic rows preserve rank, description and encoded photo path', () => {
   const data = sample();
-  assert.equal(data.themes.length, 30);
-  assert.equal(data.themes[29].rank, 30);
+  assert.equal(data.themes.length, 200);
+  assert.equal(data.themes[199].rank, 200);
   assert.equal(data.themes[0].description, '첫 줄\n둘째 줄, "인용"');
   assert.equal(decodeURI(data.themes[0].image_url), 'https://cdn.keigon.net/가상 카페/테마 1');
   assert.deepEqual(data.themes[0].missing_fields, []);
@@ -118,11 +118,11 @@ test('image downloads validate origin and actual bytes; failures remain visible'
         ? new Response('missing', { status: 404 })
         : new Response(Buffer.from([0xff, 0xd8, 0xff, 0, 1]));
     const result = await exportData(data, tmp, { fetcher, delay: 0 });
-    assert.equal(result.image_download.succeeded, 29);
+    assert.equal(result.image_download.succeeded, core.COUNT - 1);
     assert.equal(result.image_download.failures.length, 1);
     assert.equal(result.themes[0].image_file, null);
-    assert.equal((await fs.readdir(path.join(tmp, 'images'))).length, 29);
-    assert.equal(JSON.parse(await fs.readFile(path.join(tmp, 'themes.json'), 'utf8')).count, 30);
+    assert.equal((await fs.readdir(path.join(tmp, 'images'))).length, core.COUNT - 1);
+    assert.equal(JSON.parse(await fs.readFile(path.join(tmp, 'themes.json'), 'utf8')).count, 200);
     assert.ok((await fs.readFile(path.join(tmp, 'themes.csv'), 'utf8')).startsWith('\ufeff'));
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
@@ -174,7 +174,7 @@ test('browser hook preserves auth, changes only batch size and ignores ad reques
   await send('meiliSearch', { ...request, limit: 20 });
   assert.deepEqual(calls[2].body, { data: request });
   assert.equal(calls[2].header, 'test-only-token');
-  assert.equal(window.bbangCollector.getResult().count, 30);
+  assert.equal(window.bbangCollector.getResult().count, 200);
   assert.equal(window.fetch, original);
   assert.ok(!JSON.stringify(window.bbangCollector.getResult()).includes('test-only-token'));
 });

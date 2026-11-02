@@ -2,7 +2,7 @@
 (function (root) {
   const FILTER = ['isopen != false', 'store_isopen != false'];
   const SORT = ['recommendTotalRating:desc'];
-  const COUNT = 30;
+  const COUNT = 200;
   function isRequestedSearch(data) {
     return (
       data?.index === 'qrooms' &&
@@ -48,7 +48,7 @@
     const organic = result.hits.filter((hit) => hit.is_ad !== true && hit.isAd !== true);
     const selected = organic.slice(0, COUNT);
     if (selected.length !== COUNT)
-      throw new Error(`30개가 필요하지만 ${selected.length}개만 받았습니다.`);
+      throw new Error(`${COUNT}개가 필요하지만 ${selected.length}개만 받았습니다.`);
     const seen = new Set();
     let previous = null;
     const themes = selected.map((hit, index) => {
@@ -120,7 +120,7 @@
       !isRequestedSearch(data.request) ||
       data.source !== 'https://bbabang.net/#home'
     ) {
-      throw new Error('빠방 수집기로 저장한 30개 JSON 파일을 선택해주세요.');
+      throw new Error(`빠방 수집기로 저장한 ${COUNT}개 JSON 파일을 선택해주세요.`);
     }
     const ids = new Set();
     data.themes.forEach((row, index) => {
