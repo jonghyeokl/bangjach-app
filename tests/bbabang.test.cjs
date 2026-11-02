@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const core = require('../scripts/bbabang/core.cjs');
-const { downloadImage, exportData } = require('../scripts/bbabang/collect.cjs');
+const { downloadImage, downloadThemeImage, exportData } = require('../scripts/bbabang/collect.cjs');
 const request = {
   index: 'qrooms',
   query: '',
@@ -121,6 +121,18 @@ test('image downloads validate origin and actual bytes; failures remain visible'
   await assert.rejects(
     downloadImage('https://cdn.keigon.net/a', async () => new Response('<html>')),
   );
+  const gif = await downloadImage('https://cdn.keigon.net/a', async () =>
+    new Response(Buffer.from('GIF89a')),
+  );
+  assert.equal(gif.extension, 'gif');
+  const large = Buffer.alloc(13 * 1024 * 1024);
+  large.set([0xff, 0xd8, 0xff]);
+  assert.equal((await downloadImage('https://cdn.keigon.net/a', async () =>
+    new Response(large),
+  )).data.length, large.length);
+  await assert.rejects(downloadImage('https://cdn.keigon.net/a', async () =>
+    new Response(Buffer.alloc(32 * 1024 * 1024 + 1)),
+  ), /32MB/);
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bbabang-test-'));
   try {
     const data = sample();
@@ -139,6 +151,25 @@ test('image downloads validate origin and actual bytes; failures remain visible'
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
   }
+});
+
+test('only a matching theme with a 404 uses its verified official photo', async () => {
+  const row = {
+    source_id: 4359, theme_name: '메가 게임 (MEGA GAME)',
+    cafe_name: '룸즈에이 대구스테이지점', image_url: 'https://cdn.keigon.net/missing',
+  };
+  const calls = [];
+  const fetcher = async (url) => {
+    calls.push(url);
+    return url === row.image_url
+      ? new Response('', {status: 404})
+      : new Response(Buffer.from([0xff, 0xd8, 0xff]));
+  };
+  const image = await downloadThemeImage(row, fetcher);
+  assert.equal(image.sourcePage, 'https://roomsa.co.kr/');
+  assert.equal(calls.length, 2);
+  await assert.rejects(downloadThemeImage({...row, cafe_name: '다른 지점'}, fetcher), /404/);
+  await assert.rejects(downloadThemeImage(row, async () => new Response('', {status: 503})), /503/);
 });
 
 test('browser hook preserves auth, changes only batch size and ignores ad requests', async () => {

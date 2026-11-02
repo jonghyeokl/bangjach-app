@@ -4,9 +4,14 @@ const path = require('node:path');
 const { parseArgs } = require('node:util');
 const { spawn } = require('node:child_process');
 const core = require('./core.cjs');
+const photoOverrides = require('./photo-overrides.json');
+const photoOrigins = new Set([
+  'https://cdn.keigon.net',
+  ...Object.values(photoOverrides).map((photo) => new URL(photo.url).origin),
+]);
 
 async function downloadImage(url, fetcher = fetch) {
-  if (new URL(url).origin !== 'https://cdn.keigon.net') throw new Error('사진 출처가 다릅니다.');
+  if (!photoOrigins.has(new URL(url).origin)) throw new Error('사진 출처가 다릅니다.');
   const response = await fetcher(url, { redirect: 'error', signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const reader = response.body.getReader();
@@ -17,7 +22,7 @@ async function downloadImage(url, fetcher = fetch) {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 12 * 1024 * 1024) throw new Error('사진이 12MB를 초과합니다.');
+      if (size > 32 * 1024 * 1024) throw new Error('사진이 32MB를 초과합니다.');
       chunks.push(value);
     }
   } catch (error) {
@@ -31,8 +36,24 @@ async function downloadImage(url, fetcher = fetch) {
     extension = 'png';
   else if (data.toString('ascii', 0, 4) === 'RIFF' && data.toString('ascii', 8, 12) === 'WEBP')
     extension = 'webp';
-  else throw new Error('JPEG/PNG/WebP 사진 파일이 아닙니다.');
+  else if (['GIF87a', 'GIF89a'].includes(data.toString('ascii', 0, 6))) extension = 'gif';
+  else throw new Error('JPEG/PNG/WebP/GIF 사진 파일이 아닙니다.');
   return { data, extension };
+}
+async function downloadThemeImage(row, fetcher = fetch) {
+  try {
+    return { ...(await downloadImage(row.image_url, fetcher)), url: row.image_url };
+  } catch (error) {
+    const fallback = photoOverrides[row.source_id];
+    if (error.message !== 'HTTP 404' || !fallback ||
+        fallback.theme_name !== row.theme_name || fallback.cafe_name !== row.cafe_name)
+      throw error;
+    return {
+      ...(await downloadImage(fallback.url, fetcher)),
+      url: fallback.url,
+      sourcePage: fallback.source_page,
+    };
+  }
 }
 async function exportData(data, output, { images = true, fetcher = fetch, delay = 500 } = {}) {
   core.validateExport(data);
@@ -43,9 +64,11 @@ async function exportData(data, output, { images = true, fetcher = fetch, delay 
     row.image_file = null;
     if (!images || !row.image_url) continue;
     try {
-      const image = await downloadImage(row.image_url, fetcher);
+      const image = await downloadThemeImage(row, fetcher);
       row.image_file = `images/${String(row.rank).padStart(2, '0')}-${row.source_id}.${image.extension}`;
       await fs.writeFile(path.join(output, row.image_file), image.data);
+      row.image_download_url = image.url;
+      row.image_source_page = image.sourcePage ?? null;
     } catch (error) {
       failures.push({ rank: row.rank, theme_name: row.theme_name, error: error.message });
     }
@@ -129,7 +152,7 @@ async function main() {
     process.exitCode = code;
   }
 }
-module.exports = { downloadImage, exportData };
+module.exports = { downloadImage, downloadThemeImage, exportData };
 if (require.main === module)
   main().catch((error) => {
     console.error(error.message);
