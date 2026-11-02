@@ -17,6 +17,7 @@ import {
 import { router, useRouter, useSegments } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useState } from 'react';
+import { peopleText } from '@/lib/review-form';
 import { API_URL } from '@/lib/api';
 import type { Option, Photo, Review, Theme } from '@/lib/types';
 
@@ -312,14 +313,16 @@ export function ThemeCard({ theme }: { theme: Theme }) {
           {theme.cafe.name} · {theme.length}분
         </Text>
         <Text style={styles.heading}>{theme.name}</Text>
-        <Text style={styles.text}>
-          ★ {scoreText(theme.statistics.avg_rating)}{' '}
-          <Text style={styles.muted}> · 리뷰 {theme.statistics.review_count}개</Text>
-        </Text>
-        <Text style={styles.muted}>
-          난이도 {scoreText(theme.statistics.avg_difficulty)} · 공포도{' '}
-          {scoreText(theme.statistics.avg_horrorness)}
-        </Text>
+        <View style={styles.row}>
+          {theme.statistics.normalized_rating != null && <Text style={styles.text}>★ {scoreText(theme.statistics.normalized_rating)}</Text>}
+          <Text style={styles.muted}>리뷰 {theme.statistics.review_count}개</Text>
+        </View>
+        {(theme.statistics.avg_difficulty != null || theme.statistics.avg_horrorness != null) && <Text style={styles.muted}>
+          {[
+            theme.statistics.avg_difficulty == null ? null : `난이도 ${scoreText(theme.statistics.avg_difficulty)}`,
+            theme.statistics.avg_horrorness == null ? null : `공포도 ${scoreText(theme.statistics.avg_horrorness)}`,
+          ].filter(Boolean).join(' · ')}
+        </Text>}
       </View>
     </Pressable>
   );
@@ -334,7 +337,7 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
       </View>
       <Text style={styles.muted}>
         {review.theme_name} · {review.date}
-        {review.people_size ? ` · ${review.people_size}명` : ''}
+        {review.people_size ? ` · ${peopleText(review.people_size)}` : ''}
         {review.is_success !== null ? ` · ${review.is_success ? '탈출 성공' : '탈출 실패'}` : ''}
       </Text>
       <ReviewPhotos photos={review.photos ?? []} />

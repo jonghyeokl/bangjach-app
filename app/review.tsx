@@ -3,14 +3,12 @@ import { Image, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { photoUrl, Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
 import * as ImagePicker from 'expo-image-picker';
+import { Counter, DatePicker, ScorePicker } from '@/components/review-inputs';
+import { durationText, elapsedSeconds, localDate, peopleOptions } from '@/lib/review-form';
 import { api, json } from '@/lib/api';
 import { useResource } from '@/lib/hooks';
 import type { Enums, Photo, Review, Theme } from '@/lib/types';
 
-const scores = Array.from({ length: 9 }, (_, i) => ({
-  value: 1 + i * 0.5,
-  label: (1 + i * 0.5).toFixed(1),
-}));
 const fields = ['difficulty', 'horrorness', 'physicality'] as const;
 export default function ReviewEditor() {
   return (
@@ -23,41 +21,65 @@ export default function ReviewEditor() {
 }
 function Editor() {
   const { themeId, reviewId } = useLocalSearchParams<{ themeId: string; reviewId?: string }>();
+  const theme = useResource<Theme>(`/theme/v1/${themeId}`);
   const existing = useResource<Review>(reviewId ? `/review/v1/${reviewId}` : null);
-  if (reviewId && !existing.data)
-    return <Feedback loading={existing.loading} error={existing.error} retry={existing.reload} />;
+  if (!theme.data || (reviewId && !existing.data))
+    return (
+      <Feedback
+        loading={theme.loading || existing.loading}
+        error={theme.error || existing.error}
+        retry={() => {
+          theme.reload();
+          existing.reload();
+        }}
+      />
+    );
   return (
     <ReviewForm
       key={reviewId ?? themeId}
-      themeId={themeId}
+      theme={theme.data}
       reviewId={reviewId}
       initial={existing.data}
     />
   );
 }
 function ReviewForm({
-  themeId,
+  theme,
   reviewId,
   initial,
 }: {
-  themeId: string;
+  theme: Theme;
   reviewId?: string;
   initial: Review | null;
 }) {
-  const theme = useResource<Theme>(`/theme/v1/${themeId}`);
+  const themeId = theme.id;
   const meta = useResource<Enums>('/meta/v1/enums');
   const [rating, setRating] = useState<number | null>(initial?.rating ?? null);
-  const [date, setDate] = useState(initial?.date ?? '');
+  const [date, setDate] = useState(initial?.date ?? localDate());
   const [content, setContent] = useState(initial?.content ?? '');
   const [genre, setGenre] = useState<number[]>(initial?.genre_list ?? []);
   const [success, setSuccess] = useState<number | null>(
     initial?.is_success == null ? null : Number(initial.is_success),
   );
-  const [numbers, setNumbers] = useState({
-    people_size: initial?.people_size?.toString() ?? '',
-    hint_count: initial?.hint_count?.toString() ?? '',
-    played_time: initial?.played_time?.toString() ?? '',
-  });
+  const [people, setPeople] = useState<number | null>(
+    initial?.people_size ? Math.min(5, initial.people_size) : null,
+  );
+  const [hints, setHints] = useState(initial?.hint_count ?? 0);
+  const initialRemaining =
+    initial?.played_time == null ? null : theme.length * 60 - initial.played_time;
+  const [remainingMinutes, setRemainingMinutes] = useState(
+    initialRemaining == null ? '' : String(Math.floor(initialRemaining / 60)),
+  );
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    initialRemaining == null ? '' : String(initialRemaining % 60),
+  );
+  let playedTime: number | null = null;
+  let timeError = '';
+  try {
+    playedTime = elapsedSeconds(theme.length, remainingMinutes, remainingSeconds);
+  } catch (e) {
+    timeError = (e as Error).message;
+  }
   const [details, setDetails] = useState<Record<(typeof fields)[number], number | null>>({
     difficulty: initial?.difficulty ?? null,
     horrorness: initial?.horrorness ?? null,
@@ -99,11 +121,11 @@ function ReviewForm({
   const [confirmDelete, setConfirmDelete] = useState(false);
   async function save() {
     if (rating === null || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError('평점과 플레이 날짜(YYYY-MM-DD)를 입력해주세요.');
+      setError('평점과 플레이 날짜를 선택해주세요.');
       return;
     }
-    if (Object.values(numbers).some((v) => v !== '' && !/^\d+$/.test(v))) {
-      setError('인원·힌트·시간은 정수로 입력해주세요.');
+    if (timeError) {
+      setError(timeError);
       return;
     }
     setBusy(true);
@@ -116,9 +138,9 @@ function ReviewForm({
       genre_list: genre,
       is_success: success === null ? null : Boolean(success),
       ...details,
-      ...Object.fromEntries(
-        Object.entries(numbers).map(([k, v]) => [k, v === '' ? null : Number(v)]),
-      ),
+      people_size: people,
+      hint_count: hints,
+      played_time: playedTime,
     };
     try {
       await api<Review>(
@@ -145,27 +167,11 @@ function ReviewForm({
   }
   return (
     <>
-      <Feedback
-        loading={theme.loading}
-        error={theme.error || meta.error}
-        retry={() => {
-          theme.reload();
-          meta.reload();
-        }}
-      />
+      <Feedback error={meta.error} retry={meta.reload} />
       <View style={styles.card}>
-        <Text style={styles.heading}>{theme.data?.name}</Text>
-        <Text style={styles.text}>평점 *</Text>
-        <Choices options={scores} selected={rating === null ? [] : [rating]} onChange={setRating} />
-        <Field
-          label="플레이 날짜 *"
-          placeholder="2026-11-02"
-          value={date}
-          onChangeText={setDate}
-          maxLength={10}
-          autoCapitalize="none"
-        />
-        <Text style={styles.muted}>리뷰는 항상 공개되며 날짜는 캘린더에도 표시돼요.</Text>
+        <Text style={styles.heading}>{theme.name}</Text>
+        <ScorePicker label="평점" value={rating} onChange={setRating} stars />
+        <DatePicker value={date} onChange={setDate} />
       </View>
       <View style={styles.card}>
         <Text style={styles.heading}>조금 더 자세히</Text>
@@ -178,14 +184,21 @@ function ReviewForm({
           }
         />
         {fields.map((field, i) => (
-          <View key={field} style={{ gap: 8 }}>
-            <Text style={styles.text}>{['난이도', '공포도', '활동성'][i]}</Text>
-            <Choices
-              options={[{ value: 0, label: '미입력' }, ...scores]}
-              selected={[details[field] ?? 0]}
-              onChange={(v) => setDetails({ ...details, [field]: v || null })}
-            />
-          </View>
+          <ScorePicker
+            key={field}
+            label={['난이도', '공포도', '활동성'][i]}
+            endpoints={
+              (
+                [
+                  ['쉬워요', '어려워요'],
+                  ['안 무서워요', '무서워요'],
+                  ['차분해요', '많이 움직여요'],
+                ] as [string, string][]
+              )[i]
+            }
+            value={details[field]}
+            onChange={(v) => setDetails({ ...details, [field]: v })}
+          />
         ))}
         <Text style={styles.text}>탈출 결과</Text>
         <Choices
@@ -197,16 +210,43 @@ function ReviewForm({
           selected={[success ?? -1]}
           onChange={(v) => setSuccess(v === -1 ? null : v)}
         />
-        {(['people_size', 'hint_count', 'played_time'] as const).map((key, i) => (
-          <Field
-            key={key}
-            label={['플레이 인원', '힌트 수', '실제 플레이 시간 (초)'][i]}
-            placeholder="선택 입력"
-            keyboardType="number-pad"
-            value={numbers[key]}
-            onChangeText={(v) => setNumbers({ ...numbers, [key]: v })}
-          />
-        ))}
+        <Text style={styles.text}>플레이 인원</Text>
+        <Choices
+          options={peopleOptions}
+          selected={people == null ? [] : [people]}
+          onChange={(v) => setPeople(people === v ? null : v)}
+        />
+        <Counter label="힌트 수" value={hints} onChange={setHints} />
+        <Text style={styles.text}>남은 시간</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="남은 분"
+              placeholder="--"
+              keyboardType="number-pad"
+              value={remainingMinutes}
+              onChangeText={setRemainingMinutes}
+              maxLength={5}
+            />
+          </View>
+          <Text style={styles.text}>분</Text>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="남은 초"
+              placeholder="--"
+              keyboardType="number-pad"
+              value={remainingSeconds}
+              onChangeText={setRemainingSeconds}
+              maxLength={2}
+            />
+          </View>
+          <Text style={styles.text}>초</Text>
+        </View>
+        <Text style={styles.muted}>
+          테마 {theme.length}분
+          {playedTime == null ? '' : ` · 플레이 시간 ${durationText(playedTime)}`}
+        </Text>
+        {!!timeError && <Text style={{ color: '#A23C35' }}>{timeError}</Text>}
         <Field
           label="발자국을 남겨주세요"
           placeholder="스포일러 없이, 기억에 남은 순간은 어땠나요?"
@@ -215,7 +255,6 @@ function ReviewForm({
           multiline
           maxLength={5000}
         />
-        <Text style={styles.muted}>리뷰 내용에서 정해진 주제 키워드를 자동으로 찾아요.</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.heading}>리뷰 사진 · {photos.length}/5</Text>
@@ -249,7 +288,7 @@ function ReviewForm({
       <Feedback error={error} />
       <Button
         title={busy ? '기록을 저장하고 있어요…' : reviewId ? '수정한 기록 저장' : '발자국 남기기'}
-        disabled={busy || uploading || !theme.data}
+        disabled={busy || uploading}
         onPress={save}
       />
       {reviewId && (

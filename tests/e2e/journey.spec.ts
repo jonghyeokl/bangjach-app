@@ -28,14 +28,31 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 친구 → 공개 설정 �
   await page.getByRole('button', { name: /사라진 편지/ }).click();
   await expect(visibleText('플레이어들의 기록', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '이 테마 기록하기', exact: true }).click();
-  await page.getByRole('button', { name: '4.5', exact: true }).first().click();
-  await page.getByLabel('플레이 날짜 *', { exact: true }).fill('2026-11-01');
+  await page.getByRole('button', { name: '평점 4.5점', exact: true }).click();
+  await page.getByRole('button', { name: /^플레이 날짜 \d/ }).click();
+  await page.getByRole('button', { name: '2026-11-01 선택', exact: true }).click();
+  await expect(page.getByText('플레이 날짜 선택', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '5인+', exact: true }).click();
+  await page.getByRole('button', { name: '힌트 수 늘리기', exact: true }).click();
+  await page.getByLabel('남은 분', { exact: true }).fill('12');
+  await page.getByLabel('남은 초', { exact: true }).fill('30');
+  await expect(visibleText('테마 60분 · 플레이 시간 47분 30초')).toBeVisible();
+  await page.screenshot({ path: 'test-results/review-inputs-mobile.png', fullPage: true });
   await page.getByLabel('발자국을 남겨주세요', { exact: true }).fill('인테리어가 인상 깊었어요.');
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '사진 첨부', exact: true }).click();
   await (await chooser).setFiles('tests/fixtures/review-photo.png');
   await expect(visibleText('리뷰 사진 · 1/5', { exact: true })).toBeVisible();
+  const savedReview = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === '/review/v1' && r.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: '발자국 남기기', exact: true }).click();
+  expect(await (await savedReview).json()).toMatchObject({
+    rating: 4.5,
+    people_size: 5,
+    hint_count: 1,
+    played_time: 2850,
+  });
   await expect(visibleText('지금까지 1개의 발자국', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '리뷰 사진 1 크게 보기' })).toBeVisible();
   await expect(visibleText('리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.')).toBeVisible();
@@ -102,7 +119,11 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 친구 → 공개 설정 �
   await page.getByRole('button', { name: '뒤로', exact: true }).click();
   await page.getByRole('tab', { name: '마이페이지', exact: true }).click();
   await page.getByRole('button', { name: '내 리뷰 수정', exact: true }).click();
-  await page.getByLabel('플레이 날짜 *', { exact: true }).fill('2026-10-31');
+  await expect(page.getByLabel('남은 분', { exact: true })).toHaveValue('12');
+  await expect(page.getByLabel('남은 초', { exact: true })).toHaveValue('30');
+  await page.getByRole('button', { name: /^플레이 날짜 \d/ }).click();
+  await page.getByRole('button', { name: '이전 달', exact: true }).click();
+  await page.getByRole('button', { name: '2026-10-31 선택', exact: true }).click();
   await page.getByRole('button', { name: '수정한 기록 저장', exact: true }).click();
   await expect(visibleText(/사라진 편지 · 2026-10-31/)).toBeVisible();
   await page.getByRole('button', { name: '내 리뷰 수정', exact: true }).click();

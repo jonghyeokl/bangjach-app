@@ -13,7 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck && npm run lint
-      - run: npm run test:auth
+      - run: npm run test:auth && npm run test:review
       - run: npm run test:collector
       - run: npx expo export --platform web
         env:
