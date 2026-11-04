@@ -21,7 +21,7 @@ pbcopy < test-data/bbabang/collector/collector.js
 별도 터미널에서 실행하고 켜둔다. 이미 실행 중이면 생략한다.
 
 ```sh
-cloud-sql-proxy --port 5433 bangjach-api:asia-northeast3:bangjach-postgresql
+cloud-sql-proxy --port 5433 bangjach-api:asia-northeast3:bangjach-postgresql-dev
 ```
 
 ## 3. 사진 처리·DB 등록
