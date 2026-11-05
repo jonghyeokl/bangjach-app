@@ -18,11 +18,7 @@ pbcopy < test-data/bbabang/collector/collector.js
 
 ## 2. DB 연결
 
-로컬 PostgreSQL을 실행한다. 백엔드 `.env`는 `127.0.0.1:5432/bangjach`를 사용한다.
-
-```sh
-../bangjach/scripts/local-db.sh start
-```
+백엔드 `.env`의 `DATABASE_URL=sqlite+aiosqlite:///./data/bangjach.db`를 사용한다. 별도 DB 서버 시작은 필요 없다.
 
 ## 3. 사진 처리·DB 등록
 
