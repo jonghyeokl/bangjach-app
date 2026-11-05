@@ -1,9 +1,9 @@
 export type PublicUser = { id: string; name: string };
 export type User = PublicUser & { phone_number: string; is_admin: boolean };
 export type Page<T> = { items: T[]; total: number; page: number; page_size: number };
-export type Option = { value: number; label: string };
+export type Option = { value: number; label: string; parent?: number | null };
 export type Enums = Record<
-  'genre' | 'region' | 'review_keyword' | 'publicity' | 'keyword_analysis_status',
+  'genre' | 'region' | 'review_keyword' | 'subregion' | 'keyword_analysis_status',
   Option[]
 >;
 export type Statistics = {
@@ -21,6 +21,7 @@ export type Cafe = {
   id: string;
   name: string;
   region: number;
+  subregion: number | null;
   address?: string;
   website?: string | null;
   phone_number?: string;
@@ -32,6 +33,7 @@ export type Theme = {
   image_url: string | null;
   length: number;
   statistics: Statistics;
+  is_played: boolean;
   description?: string;
   website?: string | null;
 };
@@ -60,9 +62,18 @@ export type Review = {
   horrorness: number | null;
   physicality: number | null;
 };
-export type Friend = { id: string; friend: PublicUser };
-export type FriendRequest = { id: string; requesting_user: PublicUser; requested_user: PublicUser };
-export type Settings = { calendar_publicity: number; party_search_publicity: number };
+export type Follow = { id: string; user: PublicUser; status: number };
+export type Profile = PublicUser & {
+  is_private: boolean;
+  can_view: boolean;
+  is_self: boolean;
+  relationship: 'none' | 'pending' | 'following';
+  follow_id: string | null;
+  review_count: number | null;
+  follower_count: number | null;
+  following_count: number | null;
+};
+export type Settings = { is_private: boolean; party_search_enabled: boolean };
 export type CalendarData = {
   user: PublicUser;
   month: string;

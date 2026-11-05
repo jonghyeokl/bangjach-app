@@ -19,7 +19,8 @@ function Navigation() {
         <Stack.Screen name="theme/[id]" />
         <Stack.Screen name="review" />
         <Stack.Screen name="calendar" />
-        <Stack.Screen name="friends" />
+        <Stack.Screen name="follows" />
+        <Stack.Screen name="profile/[id]" />
         <Stack.Screen name="settings" />
       </Stack.Protected>
       <Stack.Protected guard={!user} redirectTo="/">

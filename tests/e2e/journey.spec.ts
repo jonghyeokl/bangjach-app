@@ -1,6 +1,8 @@
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000';
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
-test('가입 → 탐색 → 리뷰 → 캘린더 → 친구 → 공개 설정 → 리뷰 삭제', async ({ page, request }) => {
+test('가입 → 탐색 → 리뷰 → 캘린더 → 팔로우 → 공개 설정 → 리뷰 삭제', async ({ page, request }) => {
   const visibleText = (text: string | RegExp, options?: { exact: boolean }) =>
     page.getByText(text, options).filter({ visible: true });
   const errors: string[] = [];
@@ -55,55 +57,60 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 친구 → 공개 설정 �
   });
   await expect(visibleText('지금까지 1개의 발자국', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '리뷰 사진 1 크게 보기' })).toBeVisible();
+  await page.getByRole('tab', { name: '테마 검색', exact: true }).click();
+  await expect(visibleText('✓ 플레이 완료', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: '마이페이지', exact: true }).click();
   await expect(visibleText('리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.')).toBeVisible();
-  const ownPhotoUrl = await page
-    .getByRole('img', { name: '리뷰 사진 1', exact: true })
-    .getAttribute('src');
   await page.getByRole('button', { name: '캘린더', exact: true }).click();
   await page.getByLabel('월 바로가기').fill('2026-11');
   await page.getByRole('button', { name: '이 달 보기', exact: true }).click();
   await expect(page.getByRole('button', { name: '1일, 기록 1개' })).toBeVisible();
   await page.screenshot({ path: 'test-results/calendar-mobile.png', fullPage: true });
   await page.getByRole('button', { name: '뒤로', exact: true }).click();
-  await page.getByRole('button', { name: '친구', exact: true }).click();
-  await page.getByLabel('친구 닉네임', { exact: true }).fill('테스트친구0');
+  await page.getByRole('tab', { name: '피드', exact: true }).click();
+  await page.getByLabel('닉네임 검색', { exact: true }).fill('테스트친구0');
   await page.getByRole('button', { name: '검색', exact: true }).click();
-  await page.getByRole('button', { name: '친구 요청', exact: true }).click();
-  await expect(visibleText('처리했어요.', { exact: true })).toBeVisible();
-  const login = await request.post('http://127.0.0.1:8000/user/v1/log-in', {
+  await page.getByRole('button', { name: '테스트친구0', exact: true }).click();
+  await expect(visibleText('팔로우가 승인되면 발자국을 볼 수 있어요.')).toBeVisible();
+  await expect(page.getByRole('button', { name: '캘린더', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '팔로우', exact: true }).click();
+  await expect(visibleText('승인 대기 중', { exact: true })).toBeVisible();
+  const login = await request.post(`${API}/user/v1/log-in`, {
     data: { phone_number: '01070000000', password: 'test-password' },
   });
   const headers = { Authorization: `Bearer ${(await login.json()).access_token}` };
-  const incoming = await request.get('http://127.0.0.1:8000/friend-request/v1', { headers });
+  const incoming = await request.get(`${API}/follow/v1?direction=requests`, {
+    headers,
+  });
   const rid = (await incoming.json()).items[0].id;
-  expect(
-    (await request.post(`http://127.0.0.1:8000/friend-request/v1/${rid}/accept`, { headers })).ok(),
-  ).toBeTruthy();
-  const photoUpload = await request.post('http://127.0.0.1:8000/media/v1/review-photos', {
+  expect((await request.post(`${API}/follow/v1/${rid}/accept`, { headers })).ok()).toBeTruthy();
+  const photoUpload = await request.post(`${API}/media/v1/review-photos`, {
     headers: { ...headers, 'Content-Type': 'application/octet-stream' },
-    data: await (await request.get(ownPhotoUrl!)).body(),
+    data: await readFile('tests/fixtures/review-photo.png'),
   });
   expect(photoUpload.status()).toBe(201);
   const friendPhoto = await photoUpload.json();
-  const friendReviews = await request.get('http://127.0.0.1:8000/user/v1/me/reviews', { headers });
+  const friendReviews = await request.get(`${API}/user/v1/me/reviews`, { headers });
   const friendReview = (await friendReviews.json()).items[0];
   expect(
     (
-      await request.patch(`http://127.0.0.1:8000/review/v1/${friendReview.id}`, {
+      await request.patch(`${API}/review/v1/${friendReview.id}`, {
         headers,
         data: { photo_ids: [friendPhoto.id] },
       })
     ).ok(),
   ).toBeTruthy();
-  await page.getByRole('button', { name: '보낸 요청', exact: true }).click();
-  await page.getByRole('button', { name: '내 친구', exact: true }).click();
+  await page.getByRole('button', { name: '뒤로', exact: true }).click();
+  await page.getByRole('button', { name: '테스트친구0', exact: true }).click();
   await page.getByRole('button', { name: '캘린더', exact: true }).click();
   await page.getByLabel('월 바로가기').fill('2026-11');
   await page.getByRole('button', { name: '이 달 보기', exact: true }).click();
   await expect(visibleText('테스트친구0님의 기록 · 1개', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '뒤로', exact: true }).click();
   await page.getByRole('button', { name: '뒤로', exact: true }).click();
-  await page.getByRole('tab', { name: '피드', exact: true }).click();
+  await page.getByLabel('닉네임 검색', { exact: true }).fill('');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await page.getByRole('button', { name: '새로고침', exact: true }).click();
   await expect(visibleText('테스트친구0', { exact: true })).toBeVisible();
   await expect(visibleText('이야기와 공간이 인상 깊었어요.', { exact: true })).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(3);

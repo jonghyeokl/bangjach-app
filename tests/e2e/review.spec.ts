@@ -1,4 +1,9 @@
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000';
 import { test, expect } from '@playwright/test';
+
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'wait' });
+});
 const themeId = '00000000-0000-0000-0000-000000000001';
 
 test('테마 보정 평점, 통계 숨김, 단일 키워드와 인원 즉시 필터', async ({ page }) => {
@@ -43,7 +48,7 @@ test('테마 보정 평점, 통계 숨김, 단일 키워드와 인원 즉시 필
   await pending;
   // Keyword 2 replaces keyword 1 instead of adding a second selection.
   pending = query('2');
-  const enums = await (await page.request.get('http://127.0.0.1:8000/meta/v1/enums')).json();
+  const enums = await (await page.request.get(`${API}/meta/v1/enums`)).json();
   await page
     .getByRole('button', { name: new RegExp(`^${enums.review_keyword[1].label} \\d`) })
     .click();

@@ -1,3 +1,4 @@
+const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000';
 import { test, expect } from '@playwright/test';
 
 test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로가기', async ({ page }) => {
@@ -32,6 +33,7 @@ test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로�
   const themeName = '등록테마' + suffix;
   await page.getByLabel('카페명 *', { exact: true }).fill(cafeName);
   await page.getByRole('button', { name: '서울', exact: true }).click();
+  await page.getByRole('button', { name: '홍대', exact: true }).click();
   await page.getByLabel('주소 *', { exact: true }).fill('서울 테스트 주소');
   await page.getByLabel('카페 전화번호 *', { exact: true }).fill('0200000000');
   await page.getByLabel('카페 홈페이지', { exact: true }).fill('https://example.com');
@@ -57,7 +59,7 @@ test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로�
   const response = await uploaded;
   expect(response.status()).toBe(201);
   const saved = await response.json();
-  const photo = await page.request.get('http://127.0.0.1:8000' + saved.image_url);
+  const photo = await page.request.get(`${API}` + saved.image_url);
   expect(photo.headers()['content-type']).toBe('image/jpeg');
   await expect(text(`${themeName} 테마를 추가했어요.`)).toBeVisible();
   await page.screenshot({ path: 'test-results/admin-mobile.png', fullPage: true });
@@ -113,8 +115,8 @@ test('일반 계정은 관리자 탭 및 직접 주소 접근 불가, 기본 탭
   ).toBeVisible();
 });
 
-test('안 한 테마의 일행은 친구 중에서 검색하고 추가·제거한다', async ({ page, request }) => {
-  const base = 'http://127.0.0.1:8000';
+test('안 한 테마의 일행은 팔로잉 중에서 검색하고 추가·제거한다', async ({ page, request }) => {
+  const base = `${API}`;
   async function headers(phone: string) {
     const response = await request.post(base + '/user/v1/log-in', {
       data: { phone_number: phone, password: 'test-password' },
@@ -126,19 +128,18 @@ test('안 한 테마의 일행은 친구 중에서 검색하고 추가·제거�
   const outsider = await headers('01070000000');
   await request.patch(base + '/user/v1/me/settings', {
     headers: outsider,
-    data: { party_search_publicity: 3 },
+    data: { party_search_enabled: true },
   });
-  const invitation = await request.post(base + '/friend-request/v1', {
+  const invitation = await request.post(base + '/follow/v1', {
     headers: owner,
-    data: { requested_user_name: '테스트친구2' },
-  });
-  expect(invitation.status()).toBe(201);
-  const accepted = await request.post(
-    base + `/friend-request/v1/${(await invitation.json()).id}/accept`,
-    {
-      headers: friend,
+    data: {
+      user_id: (await (await request.get(base + '/user/v1/me', { headers: friend })).json()).id,
     },
-  );
+  });
+  expect(invitation.status()).toBe(200);
+  const accepted = await request.post(base + `/follow/v1/${(await invitation.json()).id}/accept`, {
+    headers: friend,
+  });
   expect(accepted.ok()).toBeTruthy();
   await page.goto('/login');
   await page.getByLabel('전화번호', { exact: true }).fill('01070000001');
@@ -146,8 +147,8 @@ test('안 한 테마의 일행은 친구 중에서 검색하고 추가·제거�
   await page.getByRole('button', { name: '로그인', exact: true }).click();
   await page.getByRole('button', { name: '장르 · 점수 · 일행 필터', exact: true }).click();
   await page.getByRole('button', { name: '안 한 테마', exact: true }).click();
-  await page.getByLabel('일행으로 추가할 친구 검색', { exact: true }).fill('테스트친구');
-  await page.getByRole('button', { name: '친구 검색', exact: true }).click();
+  await page.getByLabel('일행으로 추가할 팔로잉 검색', { exact: true }).fill('테스트친구');
+  await page.getByRole('button', { name: '팔로잉 검색', exact: true }).click();
   await expect(page.getByRole('button', { name: '테스트친구2 추가', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '테스트친구0 추가', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '테스트친구2 추가', exact: true }).click();

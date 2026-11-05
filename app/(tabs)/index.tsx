@@ -24,6 +24,7 @@ export default function Explore() {
   const meta = useResource<Enums>('/meta/v1/enums');
   const [q, setQ] = useState('');
   const [regions, setRegions] = useState<number[]>([]);
+  const [subregions, setSubregions] = useState<number[]>([]);
   const [genres, setGenres] = useState<number[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [exclude, setExclude] = useState(false);
@@ -42,7 +43,7 @@ export default function Explore() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState('');
   const themes = useResource<Page<Theme>>(`/theme/v1?${filters}&page=${page}`);
-  function searchFriends() {
+  function searchFollowing() {
     setPartyQ(partyText.trim());
     setPartyPage(1);
     people.reload();
@@ -52,6 +53,7 @@ export default function Explore() {
       query({
         q,
         region: regions,
+        subregion: subregions,
         genre: genres,
         sort,
         order,
@@ -76,8 +78,23 @@ export default function Explore() {
         <Choices
           options={meta.data?.region ?? []}
           selected={regions}
-          onChange={(v) => setRegions(toggle(regions, v))}
+          onChange={(v) => {
+            const next = toggle(regions, v);
+            setRegions(next);
+            setSubregions(
+              subregions.filter((code) =>
+                meta.data?.subregion.some((o) => o.value === code && next.includes(o.parent!)),
+              ),
+            );
+          }}
         />
+        {!!regions.length && (
+          <Choices
+            options={(meta.data?.subregion ?? []).filter((o) => regions.includes(o.parent!))}
+            selected={subregions}
+            onChange={(v) => setSubregions(toggle(subregions, v))}
+          />
+        )}
         <View style={styles.row}>
           <Button title="테마 찾기" onPress={search} />
           <Button
@@ -144,14 +161,14 @@ export default function Explore() {
             {exclude && (
               <>
                 <Field
-                  label="일행으로 추가할 친구 검색"
-                  placeholder="친구 닉네임"
+                  label="일행으로 추가할 팔로잉 검색"
+                  placeholder="팔로잉 닉네임"
                   value={partyText}
                   onChangeText={setPartyText}
-                  onSubmitEditing={searchFriends}
+                  onSubmitEditing={searchFollowing}
                   maxLength={30}
                 />
-                <Button secondary title="친구 검색" onPress={searchFriends} />
+                <Button secondary title="팔로잉 검색" onPress={searchFollowing} />
                 <Feedback loading={people.loading} error={people.error} />
                 {people.data?.items
                   .filter((p) => !party.some((x) => x.id === p.id))
@@ -165,7 +182,7 @@ export default function Explore() {
                     />
                   ))}
                 {people.data?.total === 0 && (
-                  <Text style={styles.muted}>일행 검색을 허용한 친구가 없어요.</Text>
+                  <Text style={styles.muted}>일행 검색을 허용한 팔로잉가 없어요.</Text>
                 )}
                 {people.data && (
                   <Pager page={partyPage} total={people.data.total} onChange={setPartyPage} />
@@ -188,6 +205,7 @@ export default function Explore() {
               title="필터 초기화"
               onPress={() => {
                 setRegions([]);
+                setSubregions([]);
                 setGenres([]);
                 setRanges({});
                 setExclude(false);

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { useResource } from '@/lib/hooks';
 import { useSession } from '@/lib/session';
-import type { CalendarData, Friend, Page } from '@/lib/types';
+import type { CalendarData, Follow, Page } from '@/lib/types';
 
 function thisMonth() {
   const d = new Date();
@@ -39,7 +39,7 @@ function Calendar({ initialTarget }: { initialTarget: string }) {
   const [input, setInput] = useState(month);
   const [day, setDay] = useState<number | null>(null);
   const [friendPage, setFriendPage] = useState(1);
-  const friends = useResource<Page<Friend>>(`/friend/v1?page=${friendPage}`);
+  const friends = useResource<Page<Follow>>(`/follow/v1?direction=following&page=${friendPage}`);
   const data = useResource<CalendarData>(`/user/v1/${target}/calendar?month=${month}`);
   const [year, m] = month.split('-').map(Number);
   const valid = year >= 1 && year <= 9999 && m >= 1 && m <= 12;
@@ -69,10 +69,10 @@ function Calendar({ initialTarget }: { initialTarget: string }) {
         {friends.data?.items.map((f) => (
           <Button
             key={f.id}
-            title={f.friend.name}
-            secondary={target !== f.friend.id}
+            title={f.user.name}
+            secondary={target !== f.user.id}
             onPress={() => {
-              setTarget(f.friend.id);
+              setTarget(f.user.id);
               setDay(null);
             }}
           />

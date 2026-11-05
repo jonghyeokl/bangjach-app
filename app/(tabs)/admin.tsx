@@ -54,6 +54,7 @@ export default function Admin() {
 function CafeForm({ onCreated }: { onCreated: (cafe: Cafe) => void }) {
   const meta = useResource<Enums>('/meta/v1/enums');
   const [name, setName] = useState('');
+  const [subregion, setSubregion] = useState<number | null>(null);
   const [region, setRegion] = useState<number | null>(null);
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -73,6 +74,7 @@ function CafeForm({ onCreated }: { onCreated: (cafe: Cafe) => void }) {
         json('POST', {
           name: name.trim(),
           region,
+          subregion,
           address: address.trim(),
           phone_number: phone.trim(),
           website: optionalUrl(website),
@@ -80,6 +82,7 @@ function CafeForm({ onCreated }: { onCreated: (cafe: Cafe) => void }) {
       );
       setName('');
       setRegion(null);
+      setSubregion(null);
       setAddress('');
       setPhone('');
       setWebsite('');
@@ -99,8 +102,18 @@ function CafeForm({ onCreated }: { onCreated: (cafe: Cafe) => void }) {
       <Choices
         options={meta.data?.region ?? []}
         selected={region === null ? [] : [region]}
-        onChange={setRegion}
+        onChange={(v) => {
+          setRegion(v);
+          setSubregion(null);
+        }}
       />
+      {region !== null && (
+        <Choices
+          options={(meta.data?.subregion ?? []).filter((o) => o.parent === region)}
+          selected={subregion === null ? [] : [subregion]}
+          onChange={(v) => setSubregion(subregion === v ? null : v)}
+        />
+      )}
       <Field label="주소 *" value={address} onChangeText={setAddress} maxLength={300} />
       <Field
         label="카페 전화번호 *"

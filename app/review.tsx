@@ -1,7 +1,8 @@
+import { ReviewImage } from '@/components/review-image';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { photoUrl, Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
+import { Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { Counter, DatePicker, ScorePicker } from '@/components/review-inputs';
 import { durationText, elapsedSeconds, localDate, peopleOptions } from '@/lib/review-form';
@@ -264,11 +265,19 @@ function ReviewForm({
         <View style={styles.row}>
           {photos.map((photo, index) => (
             <View key={photo.id} style={{ gap: 6 }}>
-              <Image
-                source={{ uri: photo.preview ?? photoUrl(photo.url) }}
-                accessibilityLabel={`첨부 사진 ${index + 1}`}
-                style={{ width: 130, height: 130, borderRadius: 12 }}
-              />
+              {photo.preview ? (
+                <Image
+                  source={{ uri: photo.preview }}
+                  accessibilityLabel={`첨부 사진 ${index + 1}`}
+                  style={{ width: 130, height: 130, borderRadius: 12 }}
+                />
+              ) : (
+                <ReviewImage
+                  path={photo.url}
+                  accessibilityLabel={`첨부 사진 ${index + 1}`}
+                  style={{ width: 130, height: 130, borderRadius: 12 }}
+                />
+              )}
               <Button
                 secondary
                 title={`사진 ${index + 1} 삭제`}

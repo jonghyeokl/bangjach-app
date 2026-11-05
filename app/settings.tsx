@@ -25,10 +25,7 @@ function Form() {
   );
 }
 function SettingsForm({ initial }: { initial: Settings }) {
-  const [value, setValue] = useState({
-    ...initial,
-    party_search_publicity: initial.party_search_publicity === 1 ? 1 : 2,
-  });
+  const [value, setValue] = useState(initial);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -41,8 +38,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
         await api(
           '/user/v1/me/settings',
           json('PATCH', {
-            calendar_publicity: value!.calendar_publicity,
-            party_search_publicity: value!.party_search_publicity,
+            is_private: value.is_private,
+            party_search_enabled: value.party_search_enabled,
           }),
         ),
       );
@@ -58,27 +55,28 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <Feedback error={error} />
       {value && (
         <View style={styles.card}>
-          {(['calendar_publicity', 'party_search_publicity'] as const).map((key, i) => (
-            <View key={key} style={{ gap: 12, marginBottom: 16 }}>
-              <Text style={styles.heading}>{i === 0 ? '내 캘린더' : '일행 검색 허용'}</Text>
-              <Choices
-                options={[
-                  { value: 2, label: '친구만' },
-                  ...(key === 'calendar_publicity' ? [{ value: 3, label: '전체' }] : []),
-                  { value: 1, label: '비공개' },
-                ]}
-                selected={[value[key]]}
-                onChange={(v) => {
-                  setValue({ ...value, [key]: v });
-                  setMessage('');
-                }}
-              />
-            </View>
-          ))}
+          <Text style={styles.heading}>프로필 공개 범위</Text>
+          <Choices
+            options={[
+              { value: 1, label: '비공개' },
+              { value: 0, label: '공개' },
+            ]}
+            selected={[value.is_private ? 1 : 0]}
+            onChange={(v) => setValue({ ...value, is_private: v === 1 })}
+          />
           <Text style={styles.muted}>
-            리뷰와 리뷰에 적은 플레이 날짜는 항상 공개돼요. 이 설정은 캘린더 조회와 일행 검색에
-            적용돼요.
+            비공개 계정은 승인된 팔로워에게 기록과 목록을 공개해요. 공개로 바꾸면 대기 중인 요청도
+            승인돼요.
           </Text>
+          <Text style={styles.heading}>팔로워의 일행 검색 허용</Text>
+          <Choices
+            options={[
+              { value: 1, label: '허용' },
+              { value: 0, label: '허용 안 함' },
+            ]}
+            selected={[value.party_search_enabled ? 1 : 0]}
+            onChange={(v) => setValue({ ...value, party_search_enabled: v === 1 })}
+          />
           <Button title="설정 저장" disabled={busy} onPress={save} />
           {!!message && (
             <Text accessibilityLiveRegion="polite" style={styles.text}>

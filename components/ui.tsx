@@ -1,3 +1,4 @@
+import { ReviewImage } from './review-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 import {
@@ -288,7 +289,11 @@ export function ThemeCard({ theme }: { theme: Theme }) {
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push({ pathname: '/theme/[id]', params: { id: theme.id } })}
-      style={[styles.card, { padding: 0, overflow: 'hidden' }]}
+      style={[
+        styles.card,
+        { padding: 0, overflow: 'hidden' },
+        theme.is_played && { backgroundColor: colors.light, borderColor: colors.green },
+      ]}
     >
       {theme.image_url ? (
         <Image
@@ -313,6 +318,9 @@ export function ThemeCard({ theme }: { theme: Theme }) {
           {theme.cafe.name} · {theme.length}분
         </Text>
         <Text style={styles.heading}>{theme.name}</Text>
+        {theme.is_played && (
+          <Text style={{ color: colors.green, fontWeight: '700' }}>✓ 플레이 완료</Text>
+        )}
         <View style={styles.row}>
           {theme.statistics.normalized_rating != null && <Text style={styles.text}>★ {scoreText(theme.statistics.normalized_rating)}</Text>}
           <Text style={styles.muted}>리뷰 {theme.statistics.review_count}개</Text>
@@ -332,7 +340,13 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
   return (
     <View style={styles.card}>
       <View style={styles.row}>
-        <Text style={[styles.heading, { flex: 1 }]}>{review.author.name}</Text>
+        <Pressable
+          style={{ flex: 1 }}
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/profile/[id]', params: { id: review.author.id } })}
+        >
+          <Text style={styles.heading}>{review.author.name}</Text>
+        </Pressable>
         <Text style={styles.heading}>★ {review.rating.toFixed(1)}</Text>
       </View>
       <Text style={styles.muted}>
@@ -387,8 +401,8 @@ export function ReviewPhotos({ photos }: { photos: Photo[] }) {
             accessibilityLabel={`리뷰 사진 ${index + 1} 크게 보기`}
             onPress={() => setSelected(photoUrl(photo.url))}
           >
-            <Image
-              source={{ uri: photoUrl(photo.url) }}
+            <ReviewImage
+              path={photo.url}
               accessibilityLabel={`리뷰 사진 ${index + 1}`}
               style={{ width: 220, height: 220, borderRadius: 12, backgroundColor: colors.light }}
               resizeMode="cover"
@@ -407,8 +421,8 @@ export function ReviewPhotos({ photos }: { photos: Photo[] }) {
           }}
         >
           {selected && (
-            <Image
-              source={{ uri: selected }}
+            <ReviewImage
+              path={selected}
               style={{ width: '100%', height: '70%' }}
               resizeMode="contain"
               accessibilityLabel="리뷰 사진 확대"

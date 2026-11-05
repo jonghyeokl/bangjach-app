@@ -12,6 +12,7 @@ import {
   Screen,
   styles,
 } from '@/components/ui';
+import { UserSearch } from '@/components/social';
 import { useResource } from '@/lib/hooks';
 import type { Page, Review } from '@/lib/types';
 
@@ -19,7 +20,8 @@ export default function Feed() {
   const [page, setPage] = useState(1);
   const rows = useResource<Page<Review>>(`/feed/v1?page=${page}`);
   return (
-    <Screen title="피드" subtitle="친구들이 남긴 발자국을 최신순으로 만나보세요.">
+    <Screen title="피드" subtitle="팔로우하는 사람들이 남긴 발자국을 최신순으로 만나보세요.">
+      <UserSearch onChange={rows.reload} />
       <View style={[styles.row, { justifyContent: 'space-between' }]}>
         <Text style={styles.muted}>리뷰 작성일 최신순</Text>
         <Button
@@ -36,7 +38,15 @@ export default function Feed() {
       {rows.data?.items.map((review) => (
         <View key={review.id} style={styles.card}>
           <View style={styles.row}>
-            <Text style={[styles.heading, { flex: 1 }]}>{review.author.name}</Text>
+            <Pressable
+              style={{ flex: 1 }}
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({ pathname: '/profile/[id]', params: { id: review.author.id } })
+              }
+            >
+              <Text style={styles.heading}>{review.author.name}</Text>
+            </Pressable>
             <Text style={styles.heading}>★ {review.rating.toFixed(1)}</Text>
           </View>
           <Text style={styles.muted}>
@@ -84,9 +94,7 @@ export default function Feed() {
           {!!review.content && <Text style={styles.text}>{review.content}</Text>}
         </View>
       ))}
-      {rows.data?.total === 0 && (
-        <Empty text="아직 친구들의 리뷰가 없어요. 친구를 추가하면 친구가 남긴 발자국이 여기에 모여요." />
-      )}
+      {rows.data?.total === 0 && <Empty text="팔로우하는 사람들의 발자국이 여기에 모여요." />}
       {rows.data && <Pager page={page} total={rows.data.total} onChange={setPage} />}
     </Screen>
   );

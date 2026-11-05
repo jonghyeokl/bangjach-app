@@ -29,7 +29,19 @@ function Records() {
         <Text style={styles.heading}>지금까지 {rows.data?.total ?? '…'}개의 발자국</Text>
         <View style={styles.row}>
           <Button secondary title="캘린더" onPress={() => router.push('/calendar')} />
-          <Button secondary title="친구" onPress={() => router.push('/friends')} />
+          <Button
+            secondary
+            title="팔로워"
+            onPress={() =>
+              router.push({ pathname: '/follows', params: { direction: 'followers' } })
+            }
+          />
+          <Button secondary title="팔로잉" onPress={() => router.push('/follows')} />
+          <Button
+            secondary
+            title="받은 요청"
+            onPress={() => router.push({ pathname: '/follows', params: { direction: 'requests' } })}
+          />
           <Button secondary title="설정 및 로그아웃" onPress={() => router.push('/settings')} />
         </View>
       </View>

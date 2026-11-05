@@ -167,3 +167,21 @@ export function query(values: Record<string, unknown>) {
 export async function checkHealth() {
   return api('/api/v1/health');
 }
+
+// Fetch private review photos through the same refreshable authentication flow.
+export async function reviewPhotoData(path: string): Promise<string> {
+  const prefix = '/media/v1/review-photos/';
+  const relative = path.startsWith(API_URL + prefix) ? path.slice(API_URL.length) : path;
+  if (!relative.startsWith(prefix) || !/^\/media\/v1\/review-photos\/[0-9a-f-]+$/i.test(relative))
+    throw new Error('Invalid photo path');
+  let res = await raw(relative);
+  if (res.status === 401 && (await renew())) res = await raw(relative);
+  if (!res.ok) throw new ApiError(res.status, '사진을 불러올 수 없어요.');
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
