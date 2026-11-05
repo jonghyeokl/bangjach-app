@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Choices, colors, styles } from './ui';
+import { Choices, colors, styles } from './ui';
 import type { Enums } from '@/lib/types';
 
 export function FilterChip({
@@ -115,7 +115,6 @@ export function RegionPicker({
         ))}
       </View>
       <View testID="subregion-options" style={sheet.areas}>
-        <Text style={styles.text}>{label ? `${label} 세부 지역` : '전국'}</Text>
         {region ? (
           <>
             <FilterChip
@@ -136,9 +135,7 @@ export function RegionPicker({
               }
             />
           </>
-        ) : (
-          <Button secondary title="모든 지역" onPress={() => onChange(null, [])} />
-        )}
+        ) : null}
       </View>
     </View>
   );

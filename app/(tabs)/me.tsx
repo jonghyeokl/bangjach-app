@@ -7,7 +7,7 @@ import type { Enums, Page, Review } from '@/lib/types';
 
 export default function Me() {
   return (
-    <Screen title="마이페이지">
+    <Screen tabScreen title="마이페이지">
       <Guard>
         <Records />
       </Guard>

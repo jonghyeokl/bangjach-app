@@ -15,7 +15,7 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
-import { router, useRouter, useSegments } from 'expo-router';
+import { router, useRouter } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useState } from 'react';
 import { peopleText } from '@/lib/review-form';
@@ -90,15 +90,17 @@ export function Screen({
   title,
   subtitle,
   compact = false,
+  tabScreen = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   compact?: boolean;
+  tabScreen?: boolean;
   children: ReactNode;
 }) {
   const navigation = useRouter();
-  const inTabs = useSegments()[0] === '(tabs)';
+  const inTabs = tabScreen;
   const { user } = useSession();
   return (
     <SafeAreaView
@@ -120,7 +122,7 @@ export function Screen({
         >
           {!compact && (
             <>
-              <View style={styles.row}>
+              <View testID={tabScreen ? 'tab-header' : 'page-header'} style={styles.row}>
                 {inTabs ? (
                   <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
                 ) : (

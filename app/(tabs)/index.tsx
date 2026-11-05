@@ -14,6 +14,7 @@ import {
   ThemeCard,
 } from '@/components/ui';
 import { FilterChip, FilterSheet, RegionPicker } from '@/components/search-controls';
+import { RangeSlider } from '@/components/range-slider';
 import { query } from '@/lib/api';
 import { useResource } from '@/lib/hooks';
 import { useSession } from '@/lib/session';
@@ -62,7 +63,6 @@ export default function Explore() {
   const [draftAreas, setDraftAreas] = useState<number[]>([]);
   const [draftGenres, setDraftGenres] = useState<number[]>([]);
   const [draftRanges, setDraftRanges] = useState<Record<string, string>>({});
-  const [rangeError, setRangeError] = useState('');
   const [partyText, setPartyText] = useState('');
   const [partyQ, setPartyQ] = useState('');
   const [partyPage, setPartyPage] = useState(1);
@@ -95,26 +95,6 @@ export default function Explore() {
     people.reload();
   }
   function applyDetails() {
-    for (const key of ['difficulty', 'horrorness', 'physicality']) {
-      const min = draftRanges[`${key}_min`],
-        max = draftRanges[`${key}_max`];
-      if (
-        [min, max].some(
-          (v) =>
-            v &&
-            (!Number.isFinite(Number(v)) ||
-              Number(v) < 1 ||
-              Number(v) > 5 ||
-              (Number(v) * 2) % 1 !== 0),
-        ) ||
-        (min && max && Number(min) > Number(max))
-      ) {
-        setRangeError(
-          '점수는 1~5 사이, 0.5 간격으로 입력하고 최소값은 최대값 이하로 설정해주세요.',
-        );
-        return;
-      }
-    }
     apply({ genres: draftGenres, ranges: draftRanges });
     setSheet(null);
   }
@@ -128,7 +108,7 @@ export default function Explore() {
   )?.[2];
   const detailCount = filters.genres.length + Object.values(filters.ranges).filter(Boolean).length;
   return (
-    <Screen title="테마 검색" compact>
+    <Screen tabScreen title="테마 검색" compact>
       <View style={searchStyles.searchRow}>
         <Pressable
           accessibilityRole="button"
@@ -184,7 +164,6 @@ export default function Explore() {
           onPress={() => {
             setDraftGenres(filters.genres);
             setDraftRanges(filters.ranges);
-            setRangeError('');
             setSheet('details');
           }}
         />
@@ -264,7 +243,6 @@ export default function Explore() {
               onPress={() => {
                 setDraftGenres([]);
                 setDraftRanges({});
-                setRangeError('');
               }}
             />
           </>
@@ -287,21 +265,25 @@ export default function Explore() {
             ['physicality', '활동성'],
           ] as const
         ).map(([key, label]) => (
-          <View key={key} style={styles.row}>
-            {['min', 'max'].map((bound) => (
-              <View key={bound} style={{ flex: 1 }}>
-                <Field
-                  label={`${label} ${bound === 'min' ? '최소' : '최대'}`}
-                  placeholder="1~5"
-                  keyboardType="decimal-pad"
-                  value={draftRanges[`${key}_${bound}`] ?? ''}
-                  onChangeText={(v) => setDraftRanges({ ...draftRanges, [`${key}_${bound}`]: v })}
-                />
-              </View>
-            ))}
-          </View>
+          <RangeSlider
+            key={key}
+            label={label}
+            value={[Number(draftRanges[`${key}_min`] || 1), Number(draftRanges[`${key}_max`] || 5)]}
+            onChange={([min, max]) =>
+              setDraftRanges((previous) => {
+                const next = { ...previous };
+                if (min === 1 && max === 5) {
+                  delete next[`${key}_min`];
+                  delete next[`${key}_max`];
+                } else {
+                  next[`${key}_min`] = String(min);
+                  next[`${key}_max`] = String(max);
+                }
+                return next;
+              })
+            }
+          />
         ))}
-        <Feedback error={rangeError} />
       </FilterSheet>
       <FilterSheet title="정렬" visible={sheet === 'sort'} onClose={() => setSheet(null)}>
         {sorts.map(([sort, order, label]) => (

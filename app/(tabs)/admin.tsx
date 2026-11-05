@@ -25,7 +25,7 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   if (!user?.is_admin) return <Redirect href="/" />;
   return (
-    <Screen title="테마 추가">
+    <Screen tabScreen title="테마 추가">
       <View style={styles.row}>
         <Button title="테마 추가" secondary={mode !== 'theme'} onPress={() => setMode('theme')} />
         <Button title="카페 추가" secondary={mode !== 'cafe'} onPress={() => setMode('cafe')} />

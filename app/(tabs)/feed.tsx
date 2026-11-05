@@ -20,7 +20,7 @@ export default function Feed() {
   const [page, setPage] = useState(1);
   const rows = useResource<Page<Review>>(`/feed/v1?page=${page}`);
   return (
-    <Screen title="피드">
+    <Screen tabScreen title="피드">
       <UserSearch onChange={rows.reload} />
       <View style={[styles.row, { justifyContent: 'flex-end' }]}>
         <Button

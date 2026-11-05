@@ -48,6 +48,7 @@ test('검색 상단, 2단계 지역 선택과 취소, 즉시 검색·정렬·초
     }
   }
   await page.getByRole('button', { name: '서울', exact: true }).click();
+  await expect(page.getByText('서울 세부 지역', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '홍대', exact: true }).click();
   await page.getByRole('button', { name: '강남', exact: true }).click();
   await page.screenshot({ path: 'test-results/search-regions.png', fullPage: true });
@@ -82,11 +83,12 @@ test('검색 상단, 2단계 지역 선택과 취소, 즉시 검색·정렬·초
   expect(latest.searchParams.get('sort')).toBe('difficulty');
   await page.getByRole('button', { name: '상세 필터', exact: true }).click();
   await page.getByRole('button', { name: '공포', exact: true }).click();
-  await page.getByLabel('난이도 최소', { exact: true }).fill('4');
-  await page.getByLabel('난이도 최대', { exact: true }).fill('2');
-  await page.getByRole('button', { name: '필터 적용', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('최소값은 최대값 이하');
-  await page.getByLabel('난이도 최대', { exact: true }).fill('5');
+  const minimum = page.getByRole('slider', { name: '난이도 최소', exact: true });
+  await minimum.focus();
+  await minimum.press('ArrowRight');
+  await minimum.press('ArrowRight');
+  await minimum.press('ArrowRight');
+  await expect(minimum).toHaveAttribute('aria-valuenow', '4');
   await page.getByRole('button', { name: '필터 적용', exact: true }).click();
   await expect.poll(() => latest.searchParams.get('difficulty_min')).toBe('4');
   await page.getByRole('button', { name: '상세 필터', exact: true }).click();
