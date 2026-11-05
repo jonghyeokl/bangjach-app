@@ -22,7 +22,7 @@ pbcopy < test-data/bbabang/collector/collector.js
 
 ## 3. 사진 처리·DB 등록
 
-1번 터미널에서 실행한다. 백엔드 `.env`의 DB에 실제 등록된다.
+터미널에서 앱 폴더로 들어가 실행한다. 백엔드 `.env`의 DB에 실제 등록된다.
 
 ```sh
 cd /Users/jonghyeok/bangjach/bangjach-app

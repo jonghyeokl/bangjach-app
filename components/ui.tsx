@@ -293,8 +293,7 @@ export function Pager({
     </View>
   );
 }
-export const scoreText = (v: number | null | undefined) =>
-  v == null ? '아직 집계 전' : v.toFixed(2);
+export const scoreText = (v: number | null | undefined) => (v == null ? '-' : v.toFixed(2));
 export function ThemeCard({ theme, compact = false }: { theme: Theme; compact?: boolean }) {
   if (compact)
     return (
