@@ -18,10 +18,10 @@ pbcopy < test-data/bbabang/collector/collector.js
 
 ## 2. DB 연결
 
-별도 터미널에서 실행하고 켜둔다. 이미 실행 중이면 생략한다.
+로컬 PostgreSQL을 실행한다. 백엔드 `.env`는 `127.0.0.1:5432/bangjach`를 사용한다.
 
 ```sh
-cloud-sql-proxy --port 5433 bangjach-api:asia-northeast3:bangjach-postgresql-dev
+brew services start postgresql@18
 ```
 
 ## 3. 사진 처리·DB 등록
@@ -29,7 +29,9 @@ cloud-sql-proxy --port 5433 bangjach-api:asia-northeast3:bangjach-postgresql-dev
 1번 터미널에서 실행한다. 백엔드 `.env`의 DB에 실제 등록된다.
 
 ```sh
-npm run collect:bbabang -- --input ~/Downloads/bbabang-top100.json --import-db --apply --photo-bucket bangjach-api-192693215385-review-photos
+cd /Users/jonghyeok/bangjach/bangjach-app
+source ../dev-env.sh
+npm run collect:bbabang -- --input ~/Downloads/bbabang-top100.json --import-db --apply --local-photos
 ```
 
 - 기존 테마는 건너뛰고, 필수 정보 누락·사진 오류가 있으면 등록을 중단한다.

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "start:local": "node scripts/start-local.cjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

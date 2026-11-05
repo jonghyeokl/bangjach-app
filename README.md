@@ -23,18 +23,14 @@ Node 22.13 이상(22.x), Expo Go SDK 58 기준.
 ```bash
 cd /Users/jonghyeok/bangjach/bangjach-app
 source ../dev-env.sh
-npx expo start --clear
+npm run start:local
 ```
 
 컴퓨터와 휴대폰을 같은 Wi-Fi에 연결하고 QR 코드를 스캔한다. SDK 변경 후에는 기존 Expo 서버를 종료하고 다시 실행한다. 새로 복제한 환경에서는 먼저 `npm ci` 후 `.env.example`을 참고해 `.env`를 만든다.
 
-운영 API 연결:
+현재는 로컬 백엔드·PostgreSQL을 사용한다. 먼저 [백엔드 실행 문서](../bangjach/docs/deployment.md)의 1번을 실행한다. `start:local`은 실행할 때 컴퓨터 IP를 찾아 `EXPO_PUBLIC_API_URL=http://컴퓨터IP:8000`을 적용한다. IP를 직접 지정하려면 `LOCAL_API_HOST=컴퓨터IP npm run start:local`.
 
-```env
-EXPO_PUBLIC_API_URL=https://bangjach-api-192693215385.asia-northeast3.run.app
-```
-
-운영 API를 사용하면 로컬 백엔드·DB 프록시는 필요 없다. 가입·리뷰 등은 운영 DB에 저장된다. 로컬 백엔드를 사용할 때만 API를 별도 실행하고, 휴대폰에서는 PC의 LAN IP를 API 주소로 설정한다.
+기존 Cloud Run의 공개 접근과 자동 배포는 중지했다. 컴퓨터·로컬 백엔드를 끄면 앱에서 데이터를 조회할 수 없다. 새로 복제한 환경은 샘플 데이터를 별도로 준비해야 한다.
 
 `npm run ios`, `npm run android`, `npm run web`도 사용할 수 있다. 시뮬레이터·에뮬레이터는 별도 설치가 필요하다. 웹 출처가 바뀌면 백엔드 `CORS_ORIGINS`도 수정한다.
 
@@ -94,7 +90,7 @@ Playwright가 localhost:8081의 Expo 웹을 시작하고 모바일 폭에서 시
 2026-11-02 피드·사진 추가 검증: 타입·린트·로그인 유지 테스트 통과, 웹/iOS/Android 번들 생성 및 사진 첨부 → 친구 피드 → 사진 확대 브라우저 시나리오 통과. 운영 저장소는 후속 배포에서 설정·검증 완료. 실기기 사진 선택은 미검증.
 
 
-## 배포 상태 (2026-11-02)
+## 과거 배포 기록 (2026-11-02, 현재 로컬 실행)
 
 운영 API에 친구 피드·사진 업로드를 배포하고 실제 저장까지 확인했다. 앱 소스도 `main`에 push했다. Expo Go에서 최신 코드를 열어 실기기 사진 선택·로그인 유지를 확인한다. App Store/Play Store 배포는 아직 하지 않았다.
 앞으로 작업 완료 후 검사·commit·push하고, 커밋 제목은 `feat/short summary`, `fix/short summary`처럼 짧은 영어로 작성한다(`AGENTS.md`).
