@@ -30,7 +30,7 @@ npm run start:local
 
 현재는 로컬 백엔드·PostgreSQL을 사용한다. 먼저 [백엔드 실행 문서](../bangjach/docs/deployment.md)의 1번을 실행한다. `start:local`은 실행할 때 컴퓨터 IP를 찾아 `EXPO_PUBLIC_API_URL=http://컴퓨터IP:8000`을 적용한다. IP를 직접 지정하려면 `LOCAL_API_HOST=컴퓨터IP npm run start:local`.
 
-기존 Cloud Run의 공개 접근과 자동 배포는 중지했다. 컴퓨터·로컬 백엔드를 끄면 앱에서 데이터를 조회할 수 없다. 새로 복제한 환경은 샘플 데이터를 별도로 준비해야 한다.
+기존 Cloud Run 서비스와 자동 배포 트리거는 삭제했다. 컴퓨터·로컬 백엔드를 끄면 앱에서 데이터를 조회할 수 없다. 새로 복제한 환경은 샘플 데이터를 별도로 준비해야 한다.
 
 `npm run ios`, `npm run android`, `npm run web`도 사용할 수 있다. 시뮬레이터·에뮬레이터는 별도 설치가 필요하다. 웹 출처가 바뀌면 백엔드 `CORS_ORIGINS`도 수정한다.
 
