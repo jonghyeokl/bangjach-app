@@ -89,10 +89,12 @@ export const styles = StyleSheet.create({
 export function Screen({
   title,
   subtitle,
+  compact = false,
   children,
 }: {
   title: string;
   subtitle?: string;
+  compact?: boolean;
   children: ReactNode;
 }) {
   const navigation = useRouter();
@@ -111,35 +113,42 @@ export function Screen({
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            compact && { padding: 16, gap: 12, paddingBottom: 32 },
+          ]}
         >
-          <View style={styles.row}>
-            {inTabs ? (
-              <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="뒤로"
-                onPress={() =>
-                  navigation.canGoBack()
-                    ? navigation.back()
-                    : navigation.replace(user ? '/' : '/welcome')
-                }
-                style={{
-                  paddingVertical: 8,
-                  paddingRight: 16,
-                  minHeight: 44,
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={styles.text}>← 뒤로</Text>
-              </Pressable>
-            )}
-          </View>
-          <View style={{ gap: 7, marginVertical: 8 }}>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle && <Text style={styles.muted}>{subtitle}</Text>}
-          </View>
+          {!compact && (
+            <>
+              <View style={styles.row}>
+                {inTabs ? (
+                  <Text style={[styles.heading, { flex: 1 }]}>방자취</Text>
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="뒤로"
+                    onPress={() =>
+                      navigation.canGoBack()
+                        ? navigation.back()
+                        : navigation.replace(user ? '/' : '/welcome')
+                    }
+                    style={{
+                      paddingVertical: 8,
+                      paddingRight: 16,
+                      minHeight: 44,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={styles.text}>← 뒤로</Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={{ gap: 7, marginVertical: 8 }}>
+                <Text style={styles.title}>{title}</Text>
+                {subtitle && <Text style={styles.muted}>{subtitle}</Text>}
+              </View>
+            </>
+          )}
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -284,7 +293,72 @@ export function Pager({
 }
 export const scoreText = (v: number | null | undefined) =>
   v == null ? '아직 집계 전' : v.toFixed(2);
-export function ThemeCard({ theme }: { theme: Theme }) {
+export function ThemeCard({ theme, compact = false }: { theme: Theme; compact?: boolean }) {
+  if (compact)
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/theme/[id]', params: { id: theme.id } })}
+        style={{
+          flexDirection: 'row',
+          gap: 14,
+          paddingVertical: 16,
+          paddingHorizontal: 8,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.line,
+          backgroundColor: theme.is_played ? colors.light : 'transparent',
+          borderRadius: theme.is_played ? 12 : 0,
+        }}
+      >
+        {theme.image_url ? (
+          <Image
+            source={{ uri: photoUrl(theme.image_url) }}
+            style={{ width: 96, height: 128, borderRadius: 10 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={{ width: 96, height: 128, borderRadius: 10, backgroundColor: colors.line }}
+          />
+        )}
+        <View style={{ flex: 1, gap: 7, paddingVertical: 2 }}>
+          <Text style={styles.muted} numberOfLines={1}>
+            {theme.cafe.name}
+          </Text>
+          <Text style={[styles.heading, { fontSize: 17, lineHeight: 23 }]} numberOfLines={2}>
+            {theme.name}
+          </Text>
+          <View style={[styles.row, { gap: 8 }]}>
+            {theme.statistics.normalized_rating != null && (
+              <Text style={{ color: colors.green, fontSize: 14, fontWeight: '700' }}>
+                ★ {scoreText(theme.statistics.normalized_rating)}
+              </Text>
+            )}
+            <Text style={styles.muted}>{theme.length}분</Text>
+            <Text style={styles.muted}>리뷰 {theme.statistics.review_count}</Text>
+          </View>
+          {(theme.statistics.avg_difficulty != null || theme.statistics.avg_horrorness != null) && (
+            <Text style={styles.muted}>
+              {[
+                theme.statistics.avg_difficulty == null
+                  ? null
+                  : `난이도 ${scoreText(theme.statistics.avg_difficulty)}`,
+                theme.statistics.avg_horrorness == null
+                  ? null
+                  : `공포도 ${scoreText(theme.statistics.avg_horrorness)}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          )}
+          {theme.is_played && (
+            <Text style={{ color: colors.green, fontWeight: '700', fontSize: 12 }}>
+              ✓ 플레이 완료
+            </Text>
+          )}
+        </View>
+      </Pressable>
+    );
   return (
     <Pressable
       accessibilityRole="button"
@@ -322,15 +396,25 @@ export function ThemeCard({ theme }: { theme: Theme }) {
           <Text style={{ color: colors.green, fontWeight: '700' }}>✓ 플레이 완료</Text>
         )}
         <View style={styles.row}>
-          {theme.statistics.normalized_rating != null && <Text style={styles.text}>★ {scoreText(theme.statistics.normalized_rating)}</Text>}
+          {theme.statistics.normalized_rating != null && (
+            <Text style={styles.text}>★ {scoreText(theme.statistics.normalized_rating)}</Text>
+          )}
           <Text style={styles.muted}>리뷰 {theme.statistics.review_count}개</Text>
         </View>
-        {(theme.statistics.avg_difficulty != null || theme.statistics.avg_horrorness != null) && <Text style={styles.muted}>
-          {[
-            theme.statistics.avg_difficulty == null ? null : `난이도 ${scoreText(theme.statistics.avg_difficulty)}`,
-            theme.statistics.avg_horrorness == null ? null : `공포도 ${scoreText(theme.statistics.avg_horrorness)}`,
-          ].filter(Boolean).join(' · ')}
-        </Text>}
+        {(theme.statistics.avg_difficulty != null || theme.statistics.avg_horrorness != null) && (
+          <Text style={styles.muted}>
+            {[
+              theme.statistics.avg_difficulty == null
+                ? null
+                : `난이도 ${scoreText(theme.statistics.avg_difficulty)}`,
+              theme.statistics.avg_horrorness == null
+                ? null
+                : `공포도 ${scoreText(theme.statistics.avg_horrorness)}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -343,7 +427,9 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
         <Pressable
           style={{ flex: 1 }}
           accessibilityRole="button"
-          onPress={() => router.push({ pathname: '/profile/[id]', params: { id: review.author.id } })}
+          onPress={() =>
+            router.push({ pathname: '/profile/[id]', params: { id: review.author.id } })
+          }
         >
           <Text style={styles.heading}>{review.author.name}</Text>
         </Pressable>
@@ -362,9 +448,6 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
           .filter(Boolean)
           .join(' · ')}
       </Text>
-      {review.keyword_analysis_status === 3 && (
-        <Text style={styles.muted}>리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.</Text>
-      )}
       {user?.id === review.author.id && (
         <Button
           secondary

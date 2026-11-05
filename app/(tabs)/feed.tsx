@@ -20,10 +20,9 @@ export default function Feed() {
   const [page, setPage] = useState(1);
   const rows = useResource<Page<Review>>(`/feed/v1?page=${page}`);
   return (
-    <Screen title="피드" subtitle="팔로우하는 사람들이 남긴 발자국을 최신순으로 만나보세요.">
+    <Screen title="피드">
       <UserSearch onChange={rows.reload} />
-      <View style={[styles.row, { justifyContent: 'space-between' }]}>
-        <Text style={styles.muted}>리뷰 작성일 최신순</Text>
+      <View style={[styles.row, { justifyContent: 'flex-end' }]}>
         <Button
           secondary
           title="새로고침"
@@ -81,9 +80,7 @@ export default function Feed() {
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
-              >
-                <Text style={styles.muted}>테마 사진 준비 중</Text>
-              </View>
+              />
             )}
             <Text style={styles.heading}>{review.theme_name}</Text>
             <Text style={styles.muted}>

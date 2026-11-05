@@ -60,7 +60,8 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 팔로우 → 공개 설정
   await page.getByRole('tab', { name: '테마 검색', exact: true }).click();
   await expect(visibleText('✓ 플레이 완료', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: '마이페이지', exact: true }).click();
-  await expect(visibleText('리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.')).toBeVisible();
+  await expect(visibleText('리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.')).toHaveCount(0);
+  await expect(visibleText('인테리어가 인상 깊었어요.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '캘린더', exact: true }).click();
   await page.getByLabel('월 바로가기').fill('2026-11');
   await page.getByRole('button', { name: '이 달 보기', exact: true }).click();

@@ -16,7 +16,7 @@ test('관리자 탭에서 카페와 테마 등록, 검색 갱신, 왼쪽 뒤로�
   await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
   await page.getByRole('button', { name: '로그인', exact: true }).click();
   await expect(page.getByRole('tab')).toHaveCount(4);
-  await expect(text('다음 발자국을 남기세요')).toBeVisible();
+  await expect(page.getByLabel('테마 또는 카페', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '뒤로', exact: true })).toHaveCount(0);
   const admin = page.getByRole('tab', { name: '테마 추가', exact: true });
   const box = await admin.boundingBox();
@@ -110,9 +110,7 @@ test('일반 계정은 관리자 탭 및 직접 주소 접근 불가, 기본 탭
   });
   await expect(page.getByRole('tab', { name: '테마 추가', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('테마명 *', { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByText('다음 발자국을 남기세요', { exact: true }).filter({ visible: true }),
-  ).toBeVisible();
+  await expect(page.getByLabel('테마 또는 카페', { exact: true })).toBeVisible();
 });
 
 test('안 한 테마의 일행은 팔로잉 중에서 검색하고 추가·제거한다', async ({ page, request }) => {
@@ -145,19 +143,21 @@ test('안 한 테마의 일행은 팔로잉 중에서 검색하고 추가·제�
   await page.getByLabel('전화번호', { exact: true }).fill('01070000001');
   await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
   await page.getByRole('button', { name: '로그인', exact: true }).click();
-  await page.getByRole('button', { name: '장르 · 점수 · 일행 필터', exact: true }).click();
   await page.getByRole('button', { name: '안 한 테마', exact: true }).click();
+  await page.getByRole('button', { name: '일행 선택', exact: true }).click();
   await page.getByLabel('일행으로 추가할 팔로잉 검색', { exact: true }).fill('테스트친구');
   await page.getByRole('button', { name: '팔로잉 검색', exact: true }).click();
   await expect(page.getByRole('button', { name: '테스트친구2 추가', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '테스트친구0 추가', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '테스트친구2 추가', exact: true }).click();
   await expect(page.getByRole('button', { name: '테스트친구2 ×', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '필터 적용', exact: true }).click();
+  await page.getByRole('button', { name: '완료', exact: true }).click();
   await expect(page.getByRole('button', { name: /사라진 편지/ })).toHaveCount(0);
+  await page.getByRole('button', { name: '일행 선택', exact: true }).click();
   await page.getByRole('button', { name: '테스트친구2 ×', exact: true }).click();
   await expect(page.getByRole('button', { name: '테스트친구2 추가', exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/party-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: '완료', exact: true }).click();
   await page.getByRole('tab', { name: '피드', exact: true }).click();
   await expect(page.getByRole('button', { name: '친구 찾기', exact: true })).toHaveCount(0);
 });

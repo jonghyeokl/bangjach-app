@@ -29,10 +29,7 @@ function LoginForm({ initialSignup }: { initialSignup: boolean }) {
     }
   }
   return (
-    <Screen
-      title={signup ? '첫 발자국을 남겨볼까요?' : '다시 만나서 반가워요'}
-      subtitle="함께한 순간을 발자국으로 남기세요."
-    >
+    <Screen title={signup ? '첫 발자국을 남겨볼까요?' : '다시 만나서 반가워요'}>
       <View style={styles.card}>
         {signup && (
           <Field

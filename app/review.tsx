@@ -13,7 +13,7 @@ import type { Enums, Photo, Review, Theme } from '@/lib/types';
 const fields = ['difficulty', 'horrorness', 'physicality'] as const;
 export default function ReviewEditor() {
   return (
-    <Screen title="오늘의 발자국" subtitle="평점과 플레이 날짜를 남기면 기록이 시작돼요.">
+    <Screen title="오늘의 발자국">
       <Guard>
         <Editor />
       </Guard>
@@ -259,9 +259,6 @@ function ReviewForm({
       </View>
       <View style={styles.card}>
         <Text style={styles.heading}>리뷰 사진 · {photos.length}/5</Text>
-        <Text style={styles.muted}>
-          JPEG·PNG·WebP, 한 장당 8MB까지. 사진은 리뷰와 함께 공개돼요.
-        </Text>
         <View style={styles.row}>
           {photos.map((photo, index) => (
             <View key={photo.id} style={{ gap: 6 }}>

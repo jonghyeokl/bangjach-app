@@ -25,7 +25,7 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   if (!user?.is_admin) return <Redirect href="/" />;
   return (
-    <Screen title="테마 추가" subtitle="방탈출 카페를 등록하고, 카페의 테마를 추가하세요.">
+    <Screen title="테마 추가">
       <View style={styles.row}>
         <Button title="테마 추가" secondary={mode !== 'theme'} onPress={() => setMode('theme')} />
         <Button title="카페 추가" secondary={mode !== 'cafe'} onPress={() => setMode('cafe')} />

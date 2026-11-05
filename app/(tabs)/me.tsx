@@ -3,16 +3,11 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button, Empty, Feedback, Guard, Pager, ReviewCard, Screen, styles } from '@/components/ui';
 import { useResource } from '@/lib/hooks';
-import { useSession } from '@/lib/session';
 import type { Enums, Page, Review } from '@/lib/types';
 
 export default function Me() {
-  const { user } = useSession();
   return (
-    <Screen
-      title="마이페이지"
-      subtitle={user ? `${user.name}님의 발자국을 모아보세요.` : '나의 발자국'}
-    >
+    <Screen title="마이페이지">
       <Guard>
         <Records />
       </Guard>

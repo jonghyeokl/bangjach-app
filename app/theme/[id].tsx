@@ -53,7 +53,7 @@ export default function ThemeDetail() {
             />
           )}
           <View style={styles.card}>
-            <Text style={styles.text}>{t.description || '아직 테마 소개가 없어요.'}</Text>
+            {!!t.description && <Text style={styles.text}>{t.description}</Text>}
             <Text style={styles.muted}>{t.cafe.address}</Text>
             {[
               t.statistics.normalized_rating,
@@ -110,7 +110,6 @@ export default function ThemeDetail() {
         </>
       )}
       <Text style={styles.heading}>플레이어들의 기록</Text>
-      <Text style={styles.muted}>궁금한 주제를 골라 리뷰를 살펴보세요.</Text>
       <Choices
         options={
           chips.data?.items.map((k) => ({
