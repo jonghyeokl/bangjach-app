@@ -19,8 +19,8 @@ import { router, useRouter } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useState } from 'react';
 import { peopleText } from '@/lib/review-form';
-import { API_URL } from '@/lib/api';
-import type { Option, Photo, Review, Theme } from '@/lib/types';
+import { API_URL, api, json } from '@/lib/api';
+import type { Option, Photo, Review, ReviewLike, Theme } from '@/lib/types';
 
 export const colors = {
   bg: '#F6F5F0',
@@ -424,7 +424,7 @@ export function ThemeCard({ theme, compact = false }: { theme: Theme; compact?: 
 export function ReviewCard({ review, keywords = [] }: { review: Review; keywords?: Option[] }) {
   const { user } = useSession();
   return (
-    <View style={styles.card}>
+    <View testID={`review-${review.id}`} style={styles.card}>
       <View style={styles.row}>
         <Pressable
           style={{ flex: 1 }}
@@ -450,6 +450,7 @@ export function ReviewCard({ review, keywords = [] }: { review: Review; keywords
           .filter(Boolean)
           .join(' · ')}
       </Text>
+      <ReviewLikeButton review={review} />
       {user?.id === review.author.id && (
         <Button
           secondary
@@ -516,6 +517,79 @@ export function ReviewPhotos({ photos }: { photos: Photo[] }) {
           <Button title="사진 닫기" onPress={() => setSelected(null)} />
         </View>
       </Modal>
+    </View>
+  );
+}
+
+export function ReviewLikeButton({ review, onChange }: { review: Review; onChange?: () => void }) {
+  const { user } = useSession();
+  const [saved, setSaved] = useState<{ source: Review; userId: string; result: ReviewLike } | null>(
+    null,
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const current = saved?.source === review && saved.userId === user?.id ? saved.result : review;
+  const liked = current.is_liked ?? false;
+  const count = current.like_count ?? 0;
+  async function toggle() {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await api<ReviewLike>(
+        `/review/v1/${review.id}/like`,
+        json(liked ? 'DELETE' : 'PUT'),
+      );
+      setSaved({ source: review, userId: user.id, result });
+      onChange?.();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <View style={{ gap: 4, alignItems: 'flex-start' }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${liked ? '좋아요 취소' : '좋아요'} · ${count}개`}
+        accessibilityState={{ selected: liked, disabled: busy }}
+        disabled={busy}
+        onPress={toggle}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          minHeight: 44,
+          paddingHorizontal: 8,
+          opacity: busy ? 0.5 : 1,
+        }}
+      >
+        <Text
+          allowFontScaling={false}
+          style={{ color: liked ? colors.green : colors.muted, fontSize: 24 }}
+        >
+          {liked ? '♥' : '♡'}
+        </Text>
+        <Text
+          style={{
+            color: liked ? colors.green : colors.muted,
+            fontSize: 14,
+            fontVariant: ['tabular-nums'],
+          }}
+        >
+          {count}
+        </Text>
+      </Pressable>
+      {!!error && (
+        <Text accessibilityRole="alert" style={[styles.muted, { color: colors.error }]}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 }

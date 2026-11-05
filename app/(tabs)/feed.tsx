@@ -3,7 +3,9 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   ReviewPhotos,
+  ReviewLikeButton,
   Button,
+  Choices,
   colors,
   Empty,
   Feedback,
@@ -12,17 +14,42 @@ import {
   Screen,
   styles,
 } from '@/components/ui';
+import { query } from '@/lib/api';
 import { UserSearch } from '@/components/social';
 import { useResource } from '@/lib/hooks';
 import type { Page, Review } from '@/lib/types';
 
 export default function Feed() {
   const [page, setPage] = useState(1);
-  const rows = useResource<Page<Review>>(`/feed/v1?page=${page}`);
+  const [scope, setScope] = useState<'following' | 'all'>('following');
+  const [sort, setSort] = useState<'newest' | 'likes'>('newest');
+  const rows = useResource<Page<Review>>(`/feed/v1?${query({ scope, sort, page })}`);
   return (
     <Screen tabScreen title="피드">
       <UserSearch onChange={rows.reload} />
-      <View style={[styles.row, { justifyContent: 'flex-end' }]}>
+      <Choices
+        options={[
+          { value: 0, label: '팔로잉하는 계정만' },
+          { value: 1, label: '전체' },
+        ]}
+        selected={[scope === 'following' ? 0 : 1]}
+        onChange={(v) => {
+          setScope(v === 0 ? 'following' : 'all');
+          setPage(1);
+        }}
+      />
+      <View style={[styles.row, { justifyContent: 'space-between' }]}>
+        <Choices
+          options={[
+            { value: 0, label: '최신순' },
+            { value: 1, label: '좋아요 순' },
+          ]}
+          selected={[sort === 'newest' ? 0 : 1]}
+          onChange={(v) => {
+            setSort(v === 0 ? 'newest' : 'likes');
+            setPage(1);
+          }}
+        />
         <Button
           secondary
           title="새로고침"
@@ -35,7 +62,7 @@ export default function Feed() {
       </View>
       <Feedback loading={rows.loading} error={rows.error} retry={rows.reload} />
       {rows.data?.items.map((review) => (
-        <View key={review.id} style={styles.card}>
+        <View key={review.id} testID={`review-${review.id}`} style={styles.card}>
           <View style={styles.row}>
             <Pressable
               style={{ flex: 1 }}
@@ -89,9 +116,10 @@ export default function Feed() {
           </Pressable>
           <ReviewPhotos photos={review.photos ?? []} />
           {!!review.content && <Text style={styles.text}>{review.content}</Text>}
+          <ReviewLikeButton review={review} onChange={sort === 'likes' ? rows.reload : undefined} />
         </View>
       ))}
-      {rows.data?.total === 0 && <Empty text="팔로우하는 사람들의 발자국이 여기에 모여요." />}
+      {rows.data?.total === 0 && <Empty text="최근 한 달의 리뷰가 없어요." />}
       {rows.data && <Pager page={page} total={rows.data.total} onChange={setPage} />}
     </Screen>
   );

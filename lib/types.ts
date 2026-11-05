@@ -38,7 +38,10 @@ export type Theme = {
   website?: string | null;
 };
 export type Photo = { id: string; url: string };
+export type ReviewLike = { review_id: string; like_count: number; is_liked: boolean };
 export type Review = {
+  like_count: number;
+  is_liked: boolean;
   photos: Photo[];
   id: string;
   theme_id: string;
