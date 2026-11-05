@@ -21,7 +21,7 @@ pbcopy < test-data/bbabang/collector/collector.js
 로컬 PostgreSQL을 실행한다. 백엔드 `.env`는 `127.0.0.1:5432/bangjach`를 사용한다.
 
 ```sh
-brew services start postgresql@18
+../bangjach/scripts/local-db.sh start
 ```
 
 ## 3. 사진 처리·DB 등록
