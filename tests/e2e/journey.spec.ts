@@ -38,9 +38,9 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 팔로우 → 공개 설정
   await page.getByRole('button', { name: '힌트 수 늘리기', exact: true }).click();
   await page.getByLabel('남은 분', { exact: true }).fill('12');
   await page.getByLabel('남은 초', { exact: true }).fill('30');
-  await expect(visibleText('테마 60분 · 플레이 시간 47분 30초')).toBeVisible();
+  await expect(visibleText('테마 60분 · 플레이 시간 47분 30초')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/review-inputs-mobile.png', fullPage: true });
-  await page.getByLabel('발자국을 남겨주세요', { exact: true }).fill('인테리어가 인상 깊었어요.');
+  await page.getByLabel('리뷰', { exact: true }).fill('인테리어가 인상 깊었어요.');
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '사진 첨부', exact: true }).click();
   await (await chooser).setFiles('tests/fixtures/review-photo.png');
@@ -54,14 +54,21 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 팔로우 → 공개 설정
     people_size: 5,
     hint_count: 1,
     played_time: 2850,
+    is_success: true,
   });
-  await expect(visibleText('지금까지 1개의 발자국', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '리뷰 사진 1 크게 보기' })).toBeVisible();
-  await page.getByRole('tab', { name: '테마 검색', exact: true }).click();
+  await expect(page).toHaveURL(/\/theme\//);
+  await expect(page.getByRole('button', { name: '내 리뷰 수정하기', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '뒤로', exact: true }).click();
+  await expect(page.getByRole('tab', { name: '테마 검색', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(visibleText('✓ 플레이 완료', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: '마이페이지', exact: true }).click();
   await expect(visibleText('리뷰는 저장되었지만 키워드 분석을 완료하지 못했어요.')).toHaveCount(0);
   await expect(visibleText('인테리어가 인상 깊었어요.', { exact: true })).toBeVisible();
+  await expect(visibleText('지금까지 1개의 발자국', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '리뷰 사진 1 크게 보기' })).toBeVisible();
   await page.getByRole('button', { name: '캘린더', exact: true }).click();
   await page.getByLabel('월 바로가기').fill('2026-11');
   await page.getByRole('button', { name: '이 달 보기', exact: true }).click();
@@ -132,9 +139,22 @@ test('가입 → 탐색 → 리뷰 → 캘린더 → 팔로우 → 공개 설정
   await page.getByRole('button', { name: /^플레이 날짜 \d/ }).click();
   await page.getByRole('button', { name: '이전 달', exact: true }).click();
   await page.getByRole('button', { name: '2026-10-31 선택', exact: true }).click();
+  await page.getByRole('button', { name: '실패', exact: true }).click();
+  const updatedReview = page.waitForResponse(
+    (r) => r.url().includes('/review/v1/') && r.request().method() === 'PATCH',
+  );
   await page.getByRole('button', { name: '수정한 기록 저장', exact: true }).click();
+  expect(await (await updatedReview).json()).toMatchObject({ is_success: false });
   await expect(visibleText(/사라진 편지 · 2026-10-31/)).toBeVisible();
+  await expect(page.getByRole('tab', { name: '마이페이지', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await page.getByRole('button', { name: '내 리뷰 수정', exact: true }).click();
+  await expect(page.getByRole('button', { name: '실패', exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(40, 92, 73)',
+  );
   await page.getByRole('button', { name: '이 리뷰 삭제', exact: true }).click();
   await page.getByRole('button', { name: '리뷰 삭제 확정', exact: true }).click();
   await expect(visibleText('지금까지 0개의 발자국', { exact: true })).toBeVisible();

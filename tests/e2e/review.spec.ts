@@ -65,6 +65,7 @@ test('테마 보정 평점, 통계 숨김, 단일 키워드와 인원 즉시 필
 });
 
 test('리뷰 기본 오늘, 반점 평가, 힌트 하한과 남은 시간 검증', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/login');
   await page.getByLabel('전화번호', { exact: true }).fill('01079999999');
   await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
@@ -81,6 +82,33 @@ test('리뷰 기본 오늘, 반점 평가, 힌트 하한과 남은 시간 검증
   ).toBeVisible();
   await expect(page.getByRole('button', { name: '힌트 수 줄이기', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: '평점 4.5점', exact: true }).click();
+  for (const label of ['난이도', '공포도', '활동성']) {
+    const header = page.getByTestId(`${label}-score-header`);
+    const size = () =>
+      header.evaluate((el) => ({
+        header: el.getBoundingClientRect().height,
+        block: el.parentElement!.getBoundingClientRect().height,
+      }));
+    const before = await size();
+    await page.getByRole('button', { name: `${label} 2.5점`, exact: true }).click();
+    expect(await size()).toEqual(before);
+    await page.getByRole('button', { name: `${label} 선택 해제`, exact: true }).click();
+    expect(await size()).toEqual(before);
+  }
+  await expect(
+    page.getByText(/별을 눌러 선택|0.5점 단위|여러 개 선택|차분해요|많이 움직여요/),
+  ).toHaveCount(0);
+  await expect(page.getByText('남은 분', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('남은 초', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '미입력', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '성공', exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(40, 92, 73)',
+  );
+  const hintButton = await page
+    .getByRole('button', { name: '힌트 수 늘리기', exact: true })
+    .boundingBox();
+  expect(hintButton!.height).toBe(44);
   await page.getByRole('button', { name: '난이도 2.5점', exact: true }).click();
   await page.getByRole('button', { name: '공포도 1.5점', exact: true }).click();
   await page.getByRole('button', { name: '활동성 3.5점', exact: true }).click();
@@ -93,8 +121,15 @@ test('리뷰 기본 오늘, 반점 평가, 힌트 하한과 남은 시간 검증
   await page.getByLabel('남은 초', { exact: true }).fill('60');
   await expect(page.getByText('남은 초는 0~59로 입력해주세요.')).toBeVisible();
   await page.getByLabel('남은 초', { exact: true }).fill('0');
-  await expect(page.getByText('테마 60분 · 플레이 시간 60분 00초')).toBeVisible();
+  await expect(page.getByText(/테마 60분 · 플레이 시간/)).toHaveCount(0);
   await page.getByRole('button', { name: '평점 4.5점', exact: true }).scrollIntoViewIfNeeded();
+  const fits = await page.getByTestId('난이도-score-header').evaluate((el) => {
+    for (let p: Element | null = el; p; p = p.parentElement) {
+      if (p.scrollWidth > p.clientWidth + 2 || p.scrollLeft !== 0) return false;
+    }
+    return true;
+  });
+  expect(fits).toBe(true);
   await page.screenshot({ path: 'test-results/review-score-mobile.png', fullPage: true });
   await page.getByRole('button', { name: `플레이 날짜 ${today}`, exact: true }).click();
   await expect(page.getByText('플레이 날짜 선택', { exact: true })).toBeVisible();

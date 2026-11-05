@@ -1,11 +1,11 @@
 import { ReviewImage } from '@/components/review-image';
 import { useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button, Choices, Feedback, Field, Guard, Screen, styles } from '@/components/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { Counter, DatePicker, ScorePicker } from '@/components/review-inputs';
-import { durationText, elapsedSeconds, localDate, peopleOptions } from '@/lib/review-form';
+import { elapsedSeconds, localDate, peopleOptions } from '@/lib/review-form';
 import { api, json } from '@/lib/api';
 import { useResource } from '@/lib/hooks';
 import type { Enums, Photo, Review, Theme } from '@/lib/types';
@@ -59,9 +59,7 @@ function ReviewForm({
   const [date, setDate] = useState(initial?.date ?? localDate());
   const [content, setContent] = useState(initial?.content ?? '');
   const [genre, setGenre] = useState<number[]>(initial?.genre_list ?? []);
-  const [success, setSuccess] = useState<number | null>(
-    initial?.is_success == null ? null : Number(initial.is_success),
-  );
+  const [success, setSuccess] = useState(initial?.is_success === false ? 0 : 1);
   const [people, setPeople] = useState<number | null>(
     initial?.people_size ? Math.min(5, initial.people_size) : null,
   );
@@ -120,6 +118,10 @@ function ReviewForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  function returnToPrevious() {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/theme/[id]', params: { id: themeId } });
+  }
   async function save() {
     if (rating === null || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError('평점과 플레이 날짜를 선택해주세요.');
@@ -137,7 +139,7 @@ function ReviewForm({
       date,
       content: content.trim() || null,
       genre_list: genre,
-      is_success: success === null ? null : Boolean(success),
+      is_success: Boolean(success),
       ...details,
       people_size: people,
       hint_count: hints,
@@ -148,7 +150,7 @@ function ReviewForm({
         reviewId ? `/review/v1/${reviewId}` : '/review/v1',
         json(reviewId ? 'PATCH' : 'POST', reviewId ? payload : { ...payload, theme_id: themeId }),
       );
-      router.dismissTo('/me');
+      returnToPrevious();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -159,7 +161,7 @@ function ReviewForm({
     setBusy(true);
     try {
       await api(`/review/v1/${reviewId}`, json('DELETE'));
-      router.dismissTo('/me');
+      returnToPrevious();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -175,8 +177,7 @@ function ReviewForm({
         <DatePicker value={date} onChange={setDate} />
       </View>
       <View style={styles.card}>
-        <Text style={styles.heading}>조금 더 자세히</Text>
-        <Text style={styles.text}>장르 · 여러 개 선택할 수 있어요</Text>
+        <Text style={styles.text}>장르</Text>
         <Choices
           options={meta.data?.genre ?? []}
           selected={genre}
@@ -188,15 +189,6 @@ function ReviewForm({
           <ScorePicker
             key={field}
             label={['난이도', '공포도', '활동성'][i]}
-            endpoints={
-              (
-                [
-                  ['쉬워요', '어려워요'],
-                  ['안 무서워요', '무서워요'],
-                  ['차분해요', '많이 움직여요'],
-                ] as [string, string][]
-              )[i]
-            }
             value={details[field]}
             onChange={(v) => setDetails({ ...details, [field]: v })}
           />
@@ -204,12 +196,11 @@ function ReviewForm({
         <Text style={styles.text}>탈출 결과</Text>
         <Choices
           options={[
-            { value: -1, label: '미입력' },
             { value: 1, label: '성공' },
             { value: 0, label: '실패' },
           ]}
-          selected={[success ?? -1]}
-          onChange={(v) => setSuccess(v === -1 ? null : v)}
+          selected={[success]}
+          onChange={setSuccess}
         />
         <Text style={styles.text}>플레이 인원</Text>
         <Choices
@@ -220,42 +211,29 @@ function ReviewForm({
         <Counter label="힌트 수" value={hints} onChange={setHints} />
         <Text style={styles.text}>남은 시간</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Field
-              label="남은 분"
-              placeholder="--"
-              keyboardType="number-pad"
-              value={remainingMinutes}
-              onChangeText={setRemainingMinutes}
-              maxLength={5}
-            />
-          </View>
+          <TextInput
+            accessibilityLabel="남은 분"
+            placeholder="--"
+            keyboardType="number-pad"
+            value={remainingMinutes}
+            onChangeText={setRemainingMinutes}
+            maxLength={5}
+            style={[styles.input, { flex: 1, minWidth: 0, textAlign: 'center' }]}
+          />
           <Text style={styles.text}>분</Text>
-          <View style={{ flex: 1 }}>
-            <Field
-              label="남은 초"
-              placeholder="--"
-              keyboardType="number-pad"
-              value={remainingSeconds}
-              onChangeText={setRemainingSeconds}
-              maxLength={2}
-            />
-          </View>
+          <TextInput
+            accessibilityLabel="남은 초"
+            placeholder="--"
+            keyboardType="number-pad"
+            value={remainingSeconds}
+            onChangeText={setRemainingSeconds}
+            maxLength={2}
+            style={[styles.input, { flex: 1, minWidth: 0, textAlign: 'center' }]}
+          />
           <Text style={styles.text}>초</Text>
         </View>
-        <Text style={styles.muted}>
-          테마 {theme.length}분
-          {playedTime == null ? '' : ` · 플레이 시간 ${durationText(playedTime)}`}
-        </Text>
         {!!timeError && <Text style={{ color: '#A23C35' }}>{timeError}</Text>}
-        <Field
-          label="발자국을 남겨주세요"
-          placeholder="스포일러 없이, 기억에 남은 순간은 어땠나요?"
-          value={content}
-          onChangeText={setContent}
-          multiline
-          maxLength={5000}
-        />
+        <Field label="리뷰" value={content} onChangeText={setContent} multiline maxLength={5000} />
       </View>
       <View style={styles.card}>
         <Text style={styles.heading}>리뷰 사진 · {photos.length}/5</Text>

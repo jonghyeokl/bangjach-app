@@ -13,7 +13,7 @@ export function Counter({
   onChange: (value: number) => void;
 }) {
   return (
-    <View style={{ gap: 12 }}>
+    <View style={[styles.row, { justifyContent: 'space-between' }]}>
       <Text style={styles.text}>{label}</Text>
       <View style={inputStyles.counter}>
         <Pressable
@@ -22,9 +22,11 @@ export function Counter({
           accessibilityState={{ disabled: value === 0 }}
           disabled={value === 0}
           onPress={() => onChange(value - 1)}
-          style={[inputStyles.circle, value === 0 && { opacity: 0.35 }]}
+          style={[inputStyles.counterButton, value === 0 && { opacity: 0.35 }]}
         >
-          <Text style={inputStyles.symbol}>−</Text>
+          <View style={inputStyles.circle}>
+            <Text style={inputStyles.symbol}>−</Text>
+          </View>
         </Pressable>
         <Text accessibilityLabel={`${label} ${value}`} style={inputStyles.counterValue}>
           {value}
@@ -33,9 +35,11 @@ export function Counter({
           accessibilityRole="button"
           accessibilityLabel={`${label} 늘리기`}
           onPress={() => onChange(value + 1)}
-          style={inputStyles.circle}
+          style={inputStyles.counterButton}
         >
-          <Text style={inputStyles.symbol}>+</Text>
+          <View style={inputStyles.circle}>
+            <Text style={inputStyles.symbol}>+</Text>
+          </View>
         </Pressable>
       </View>
     </View>
@@ -47,44 +51,47 @@ export function ScorePicker({
   value,
   onChange,
   stars = false,
-  endpoints,
 }: {
   label: string;
   value: number | null;
   onChange: (value: number | null) => void;
   stars?: boolean;
-  endpoints?: [string, string];
 }) {
   return (
     <View style={inputStyles.score}>
-      <View style={[styles.row, { justifyContent: 'space-between' }]}>
-        <Text style={styles.text}>
+      <View testID={`${label}-score-header`} style={inputStyles.scoreHeader}>
+        <Text style={[styles.text, { flexShrink: 1 }]}>
           {label}
           {stars ? ' *' : ''}
         </Text>
-        <View style={styles.row}>
-          <Text style={inputStyles.scoreValue}>
+        <View style={inputStyles.scoreControls}>
+          <Text numberOfLines={1} maxFontSizeMultiplier={1.5} style={inputStyles.scoreValue}>
             {value?.toFixed(1) ?? '—'}
-            <Text style={styles.muted}> / 5</Text>
           </Text>
-          {!stars && value !== null && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${label} 선택 해제`}
-              onPress={() => onChange(null)}
-              style={{ padding: 10 }}
-            >
-              <Text style={styles.muted}>초기화</Text>
-            </Pressable>
+          {!stars && (
+            <View style={inputStyles.clearSlot}>
+              {value !== null && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${label} 선택 해제`}
+                  onPress={() => onChange(null)}
+                  style={inputStyles.clearSlot}
+                >
+                  <Text style={styles.muted}>×</Text>
+                </Pressable>
+              )}
+            </View>
           )}
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: stars ? 8 : 6, justifyContent: 'space-between' }}>
         {[1, 2, 3, 4, 5].map((score) => (
-          <View key={score} style={{ flex: 1, height: 48 }}>
+          <View key={score} style={{ flex: 1, height: 44 }}>
             {stars ? (
               <View pointerEvents="none" style={inputStyles.starBase}>
-                <Text style={inputStyles.starEmpty}>★</Text>
+                <Text allowFontScaling={false} style={inputStyles.starEmpty}>
+                  ★
+                </Text>
                 <View
                   style={{
                     position: 'absolute',
@@ -94,7 +101,12 @@ export function ScorePicker({
                     overflow: 'hidden',
                   }}
                 >
-                  <Text style={[inputStyles.starEmpty, { color: colors.green }]}>★</Text>
+                  <Text
+                    allowFontScaling={false}
+                    style={[inputStyles.starEmpty, { color: colors.green }]}
+                  >
+                    ★
+                  </Text>
                 </View>
               </View>
             ) : (
@@ -112,6 +124,8 @@ export function ScorePicker({
                   style={{
                     color: (value ?? 0) >= score ? colors.white : colors.ink,
                     fontWeight: '600',
+                    fontSize: 14,
+                    lineHeight: 20,
                   }}
                 >
                   {score}
@@ -126,16 +140,12 @@ export function ScorePicker({
                   accessibilityLabel={`${label} ${n.toFixed(1)}점`}
                   accessibilityState={{ selected: value === n }}
                   onPress={() => onChange(n)}
-                  style={{ flex: 1, minHeight: 48 }}
+                  style={{ flex: 1, minHeight: 44 }}
                 />
               ))}
             </View>
           </View>
         ))}
-      </View>
-      <View style={[styles.row, { justifyContent: 'space-between' }]}>
-        <Text style={styles.muted}>{endpoints?.[0] ?? '별을 눌러 선택'}</Text>
-        <Text style={styles.muted}>{endpoints?.[1] ?? '0.5점 단위'}</Text>
       </View>
     </View>
   );
@@ -177,7 +187,7 @@ export function DatePicker({
           {value.replaceAll('-', '. ')}
           {value === today ? ' · 오늘' : ''}
         </Text>
-        <Text style={styles.muted}>날짜 선택</Text>
+        <Text style={styles.muted}>⌄</Text>
       </Pressable>
       <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
         <View style={inputStyles.backdrop}>
@@ -268,9 +278,26 @@ export function DatePicker({
 }
 const inputStyles = StyleSheet.create({
   score: { gap: 8, paddingVertical: 6 },
-  scoreValue: { fontSize: 25, fontWeight: '700', color: colors.green },
-  starBase: { position: 'absolute', top: 0, width: 40, height: 48, alignSelf: 'center' },
-  starEmpty: { color: colors.line, fontSize: 40, lineHeight: 48, width: 40, textAlign: 'center' },
+  scoreHeader: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scoreControls: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  clearSlot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  scoreValue: {
+    width: 52,
+    textAlign: 'right',
+    fontSize: 18,
+    lineHeight: 26,
+    includeFontPadding: false,
+    fontWeight: '700',
+    color: colors.green,
+    fontVariant: ['tabular-nums'],
+  },
+  starBase: { position: 'absolute', top: 0, width: 36, height: 44, alignSelf: 'center' },
+  starEmpty: { color: colors.line, fontSize: 32, lineHeight: 44, width: 36, textAlign: 'center' },
   segment: {
     position: 'absolute',
     top: 0,
@@ -287,23 +314,24 @@ const inputStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
-    paddingVertical: 8,
+    gap: 6,
   },
+  counterButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   circle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  symbol: { fontSize: 29, color: colors.muted, lineHeight: 34 },
+  symbol: { fontSize: 21, color: colors.muted, lineHeight: 26 },
   counterValue: {
-    minWidth: 42,
+    minWidth: 30,
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: 18,
+    lineHeight: 26,
     color: colors.ink,
     fontVariant: ['tabular-nums'],
   },
